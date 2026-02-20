@@ -7,6 +7,7 @@ __pycache__/
 dist/
 build/
 *.whl
+*.pyo
 
 # Virtual environments
 .venv/
@@ -15,12 +16,15 @@ env/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -30,7 +34,19 @@ Thumbs.db
 .pytest_cache/
 .coverage
 htmlcov/
+coverage.xml
 
-# Alembic
-migrations/versions/__pycache__/
-migrations/__pycache__/
+# Linting
+.ruff_cache/
+.mypy_cache/
+
+# Database (local dev)
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Claude Code
+.claude/settings.local.json
