@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git ls-tree:*)",
+      "Bash(git -C /Users/josephkim ls-files)",
+      "Bash(git -C /Users/josephkim config --get remote.origin.url)",
+      "Bash(git -C /Users/josephkim/.git config:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

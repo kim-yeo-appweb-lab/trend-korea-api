@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: trend-korea-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: trend_korea
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - trend_korea_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d trend_korea"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  trend_korea_postgres:
