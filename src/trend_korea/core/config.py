@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     app_port: int = 8000
     api_v1_prefix: str = "/api/v1"
 
-    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/trend_korea"
+    database_url: str = Field(..., min_length=10)
 
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 14
