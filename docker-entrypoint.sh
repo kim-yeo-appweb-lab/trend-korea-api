@@ -4,7 +4,10 @@ set -euo pipefail
 # 조건부 Alembic 마이그레이션
 if [ "${RUN_MIGRATIONS:-false}" = "true" ]; then
     echo "[entrypoint] Alembic 마이그레이션 실행..."
-    alembic upgrade head
+    if ! alembic upgrade head; then
+        echo "[entrypoint] upgrade 실패 — 기존 테이블 감지, stamp head 실행..."
+        alembic stamp head
+    fi
 fi
 
 # API 서버를 백그라운드로 시작
