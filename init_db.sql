@@ -1,5 +1,5 @@
 -- ============================================================
--- Trend Korea Backend - Database Schema
+-- Trend Korea API - Database Schema
 -- PostgreSQL 16+
 -- Generated from Alembic migration: 20260215_000001_init
 -- ============================================================

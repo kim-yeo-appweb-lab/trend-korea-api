@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "trend-korea-backend"
+name = "trend-korea-api"
 version = "0.1.0"
-description = "Trend Korea domain-driven FastAPI backend"
+description = "Trend Korea domain-driven FastAPI API"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.116.0,<1.0.0",
