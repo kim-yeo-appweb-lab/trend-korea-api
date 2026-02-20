@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,17 +23,11 @@ class Settings(BaseSettings):
     scheduler_timezone: str = "Asia/Seoul"
     auto_create_tables: bool = True
 
-    cors_origins: list[str] = Field(default_factory=lambda: ["*"])
+    cors_origins: str = "*"
 
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def _parse_origins(cls, value: str | list[str]) -> list[str]:
-        if isinstance(value, list):
-            return value
-        if isinstance(value, str):
-            values = [item.strip() for item in value.split(",") if item.strip()]
-            return values or ["*"]
-        return ["*"]
+    @property
+    def cors_origins_list(self) -> list[str]:
+        return [item.strip() for item in self.cors_origins.split(",") if item.strip()] or ["*"]
 
 
 @lru_cache(maxsize=1)
