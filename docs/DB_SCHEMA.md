@@ -1,4 +1,4 @@
-# Trend Korea Backend DB Schema
+# Trend Korea API DB Schema
 
 기준: `migrations/versions/20260215_000001_init.py` (PostgreSQL)
 

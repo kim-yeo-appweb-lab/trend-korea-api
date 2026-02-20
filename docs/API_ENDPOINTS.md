@@ -1,4 +1,4 @@
-# Trend Korea Backend API 엔드포인트 명세 (구현 기준)
+# Trend Korea API 엔드포인트 명세 (구현 기준)
 
 기준 코드:
 - `src/trend_korea/main.py`

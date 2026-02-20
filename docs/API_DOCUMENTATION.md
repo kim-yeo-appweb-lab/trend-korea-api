@@ -38,8 +38,8 @@
 
 | Component | Description | Location |
 |-----------|-------------|----------|
-| **Backend API** | FastAPI 기반 REST API 서버 | `trend-korea-backend/` |
-| **Keyword Crawler** | 뉴스 채널 메인 페이지 키워드 추출 CLI | `trend-korea-backend/src/trend_korea/keyword_crawler/` |
+| **Backend API** | FastAPI 기반 REST API 서버 | `trend-korea-api/` |
+| **Keyword Crawler** | 뉴스 채널 메인 페이지 키워드 추출 CLI | `trend-korea-api/src/trend_korea/keyword_crawler/` |
 | **News Pipeline** | 키워드 기반 뉴스 기사 수집 파이프라인 | `news-crawl-pipeline/` |
 
 ### Architecture
@@ -103,7 +103,7 @@ psql -d trend_korea -f init_db.sql
 ### Backend 실행
 
 ```bash
-cd trend-korea-backend
+cd trend-korea-api
 pip install -e ".[crawler]"
 
 # 서버 실행
@@ -1157,7 +1157,7 @@ refresh_tokens ── users
 ### 설치 & 실행
 
 ```bash
-cd trend-korea-backend
+cd trend-korea-api
 pip install -e ".[crawler]"
 
 # 실행
