@@ -8,6 +8,7 @@ from trend_korea.db.enums import IssueStatus, SourceEntityType
 from trend_korea.db.enums import TriggerType
 from trend_korea.issues.models import Issue, issue_events, issue_tags, user_tracked_issues
 from trend_korea.sources.models import Source
+from trend_korea.tags.models import Tag
 from trend_korea.triggers.models import Trigger
 
 
@@ -330,6 +331,18 @@ class IssueRepository:
         items = rows[:size]
         next_offset = offset + size if has_next else None
         return items, next_offset
+
+    def count_tags_by_ids(self, tag_ids: list[str]) -> int:
+        if not tag_ids:
+            return 0
+        stmt = select(func.count(Tag.id)).where(Tag.id.in_(tag_ids))
+        return int(self.db.execute(stmt).scalar_one())
+
+    def count_sources_by_ids(self, source_ids: list[str]) -> int:
+        if not source_ids:
+            return 0
+        stmt = select(func.count(Source.id)).where(Source.id.in_(source_ids))
+        return int(self.db.execute(stmt).scalar_one())
 
     def count_tracked_issues(self, *, user_id: str) -> int:
         stmt = (
