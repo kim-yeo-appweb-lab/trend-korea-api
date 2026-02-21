@@ -74,6 +74,14 @@ class AuthRepository:
             token.revoked_at = datetime.now(timezone.utc)
             self.db.flush()
 
+    def deactivate_user(self, user_id: str) -> None:
+        user = self.get_user_by_id(user_id)
+        if user:
+            now = datetime.now(timezone.utc)
+            user.withdrawn_at = now
+            user.is_active = False
+            self.db.flush()
+
     def revoke_refresh_tokens_by_user_id(self, user_id: str) -> None:
         stmt = select(RefreshToken).where(
             RefreshToken.user_id == user_id,

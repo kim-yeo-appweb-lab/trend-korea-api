@@ -102,6 +102,39 @@ class AuthService:
         self.repository.revoke_refresh_token(token_hash)
         return self._issue_tokens(user.id, user.role.value)
 
+    def withdraw(self, *, user_id: str, password: str | None) -> None:
+        user = self.repository.get_user_by_id(user_id)
+        if user is None:
+            raise AppError(
+                code="E_RESOURCE_005",
+                message="사용자를 찾을 수 없습니다.",
+                status_code=404,
+            )
+        if user.withdrawn_at is not None:
+            raise AppError(
+                code="E_AUTH_006",
+                message="이미 탈퇴한 계정입니다.",
+                status_code=409,
+            )
+
+        is_social_user = user.email.endswith("@social.trend-korea.local")
+        if not is_social_user:
+            if not password:
+                raise AppError(
+                    code="E_VALID_001",
+                    message="비밀번호를 입력해주세요.",
+                    status_code=400,
+                )
+            if not verify_password(password, user.password_hash):
+                raise AppError(
+                    code="E_AUTH_004",
+                    message="비밀번호가 일치하지 않습니다.",
+                    status_code=401,
+                )
+
+        self.logout(user_id=user_id)
+        self.repository.deactivate_user(user_id)
+
     def logout(self, *, refresh_token: str | None = None, user_id: str | None = None) -> None:
         if refresh_token:
             token_hash = hash_token(refresh_token)
