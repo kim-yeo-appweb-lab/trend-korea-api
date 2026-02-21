@@ -117,8 +117,6 @@ def update_post(
         tag_ids=payload.tagIds,
         is_admin=is_admin,
     )
-    if updated is None:
-        raise AppError(code="E_PERM_001", message="작성자가 아닙니다.", status_code=403)
     db.commit()
     return success_response(request=request, data=updated, message="게시글 수정 성공")
 
@@ -135,9 +133,7 @@ def update_post(
 def delete_post(post_id: str, request: Request, db: DbSession, user_id: CurrentMemberUserId):
     service = CommunityService(CommunityRepository(db))
     is_admin = getattr(request.state, "user_role", None) == "admin"
-    ok = service.delete_post(post_id=post_id, user_id=user_id, is_admin=is_admin)
-    if not ok:
-        raise AppError(code="E_PERM_001", message="작성자가 아닙니다.", status_code=403)
+    service.delete_post(post_id=post_id, user_id=user_id, is_admin=is_admin)
     db.commit()
     return success_response(request=request, data=None, message="게시글 삭제 성공")
 
@@ -248,8 +244,6 @@ def update_comment(
         content=payload.content,
         is_admin=is_admin,
     )
-    if item is None:
-        raise AppError(code="E_PERM_001", message="작성자가 아닙니다.", status_code=403)
     db.commit()
     return success_response(
         request=request,
@@ -275,9 +269,7 @@ def delete_comment(
 ):
     service = CommunityService(CommunityRepository(db))
     is_admin = getattr(request.state, "user_role", None) == "admin"
-    ok = service.delete_comment(comment_id=comment_id, user_id=user_id, is_admin=is_admin)
-    if not ok:
-        raise AppError(code="E_PERM_001", message="작성자가 아닙니다.", status_code=403)
+    service.delete_comment(comment_id=comment_id, user_id=user_id, is_admin=is_admin)
     db.commit()
     return success_response(request=request, data=None, message="댓글 삭제 성공")
 

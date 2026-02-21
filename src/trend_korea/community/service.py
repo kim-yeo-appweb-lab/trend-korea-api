@@ -1,3 +1,4 @@
+from trend_korea.core.exceptions import AppError
 from trend_korea.core.pagination import decode_cursor, encode_cursor
 from trend_korea.db.enums import VoteType
 from trend_korea.community.repository import CommunityRepository
@@ -72,23 +73,22 @@ class CommunityService:
         content: str | None,
         tag_ids: list[str] | None,
         is_admin: bool = False,
-    ) -> dict | None:
+    ) -> dict:
         post = self.repository.get_post(post_id)
         if post is None:
-            return None
+            raise AppError(code="E_RESOURCE_003", message="게시글을 찾을 수 없습니다.", status_code=404)
         if post.author_id != user_id and not is_admin:
-            return None
+            raise AppError(code="E_PERM_001", message="작성자 또는 관리자만 가능합니다.", status_code=403)
         updated = self.repository.update_post(post=post, title=title, content=content, tag_ids=tag_ids)
         return self._post_to_item(updated)
 
-    def delete_post(self, *, post_id: str, user_id: str, is_admin: bool = False) -> bool:
+    def delete_post(self, *, post_id: str, user_id: str, is_admin: bool = False) -> None:
         post = self.repository.get_post(post_id)
         if post is None:
-            return False
+            raise AppError(code="E_RESOURCE_003", message="게시글을 찾을 수 없습니다.", status_code=404)
         if post.author_id != user_id and not is_admin:
-            return False
+            raise AppError(code="E_PERM_001", message="작성자 또는 관리자만 가능합니다.", status_code=403)
         self.repository.delete_post(post)
-        return True
 
     def list_comments(
         self,
@@ -112,6 +112,20 @@ class CommunityService:
         post = self.repository.get_post(post_id)
         if post is None:
             return None
+        if parent_id:
+            parent = self.repository.get_comment(parent_id)
+            if parent is None:
+                raise AppError(
+                    code="E_RESOURCE_004",
+                    message="부모 댓글을 찾을 수 없습니다.",
+                    status_code=404,
+                )
+            if parent.post_id != post_id:
+                raise AppError(
+                    code="E_VALID_002",
+                    message="다른 게시글의 댓글에는 대댓글을 달 수 없습니다.",
+                    status_code=400,
+                )
         comment = self.repository.create_comment(
             post=post,
             author_id=user_id,
@@ -120,23 +134,22 @@ class CommunityService:
         )
         return self._comment_to_item(comment)
 
-    def update_comment(self, *, comment_id: str, user_id: str, content: str, is_admin: bool = False) -> dict | None:
+    def update_comment(self, *, comment_id: str, user_id: str, content: str, is_admin: bool = False) -> dict:
         comment = self.repository.get_comment(comment_id)
         if comment is None:
-            return None
+            raise AppError(code="E_RESOURCE_004", message="댓글을 찾을 수 없습니다.", status_code=404)
         if comment.author_id != user_id and not is_admin:
-            return None
+            raise AppError(code="E_PERM_001", message="작성자 또는 관리자만 가능합니다.", status_code=403)
         updated = self.repository.update_comment(comment=comment, content=content)
         return self._comment_to_item(updated)
 
-    def delete_comment(self, *, comment_id: str, user_id: str, is_admin: bool = False) -> bool:
+    def delete_comment(self, *, comment_id: str, user_id: str, is_admin: bool = False) -> None:
         comment = self.repository.get_comment(comment_id)
         if comment is None:
-            return False
+            raise AppError(code="E_RESOURCE_004", message="댓글을 찾을 수 없습니다.", status_code=404)
         if comment.author_id != user_id and not is_admin:
-            return False
+            raise AppError(code="E_PERM_001", message="작성자 또는 관리자만 가능합니다.", status_code=403)
         self.repository.delete_comment(comment=comment)
-        return True
 
     def like_comment(self, *, comment_id: str, user_id: str) -> dict | None:
         comment = self.repository.get_comment(comment_id)
