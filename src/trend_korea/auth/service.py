@@ -98,6 +98,12 @@ class AuthService:
                 message="사용자를 찾을 수 없습니다",
                 status_code=404,
             )
+        if user.withdrawn_at is not None:
+            raise AppError(
+                code="E_AUTH_006",
+                message="이미 탈퇴한 계정입니다.",
+                status_code=401,
+            )
 
         self.repository.revoke_refresh_token(token_hash)
         return self._issue_tokens(user.id, user.role.value)
