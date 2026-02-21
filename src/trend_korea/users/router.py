@@ -131,8 +131,8 @@ def change_password(
 
 @me_router.post(
     "/social-connect",
-    summary="SNS 계정 연동",
-    description="현재 계정에 SNS 계정을 연동합니다. `Authorization: Bearer <token>` 필요.",
+    summary="SNS 계정 연동 (미구현)",
+    description="현재 계정에 SNS 계정을 연동합니다. (미구현) `Authorization: Bearer <token>` 필요.",
     responses={**RESPONSE_400, **RESPONSE_401},
 )
 def social_connect(
@@ -152,8 +152,8 @@ def social_connect(
 
 @me_router.delete(
     "/social-disconnect",
-    summary="SNS 계정 연동 해제",
-    description="연동된 SNS 계정을 해제합니다. `Authorization: Bearer <token>` 필요.",
+    summary="SNS 계정 연동 해제 (미구현)",
+    description="연동된 SNS 계정을 해제합니다. (미구현) `Authorization: Bearer <token>` 필요.",
     responses={**RESPONSE_400, **RESPONSE_401},
 )
 def social_disconnect(
@@ -173,8 +173,8 @@ def social_disconnect(
 
 @me_router.get(
     "/activity",
-    summary="내 활동 내역 조회",
-    description="게시글, 댓글, 추천 등 내 활동 내역을 페이지네이션으로 조회합니다. `Authorization: Bearer <token>` 필요.",
+    summary="내 활동 내역 조회 (미구현)",
+    description="게시글, 댓글, 추천 등 내 활동 내역을 페이지네이션으로 조회합니다. (미구현) `Authorization: Bearer <token>` 필요.",
     responses={**RESPONSE_401},
 )
 def get_my_activity(

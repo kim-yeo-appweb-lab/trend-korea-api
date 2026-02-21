@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query, Request
 
 from trend_korea.shared.dependencies import DbSession
+from trend_korea.shared.schemas import RESPONSE_400
 from trend_korea.search.service import SearchService
 from trend_korea.core.response import success_response
 from trend_korea.search.repository import SearchRepository
@@ -36,6 +37,7 @@ def _build_search_response(*, items: list[dict], page: int, limit: int) -> dict:
     "",
     summary="통합 검색",
     description="사건, 이슈, 게시글을 통합 검색합니다. `tab` 파라미터로 검색 범위를 지정할 수 있습니다. 페이지 기반 페이지네이션을 사용합니다.",
+    responses={**RESPONSE_400},
 )
 def search(
     request: Request,
@@ -90,6 +92,7 @@ def search(
     "/events",
     summary="사건 검색",
     description="사건만을 대상으로 검색합니다. 페이지 기반 페이지네이션을 사용합니다.",
+    responses={**RESPONSE_400},
 )
 def search_events(
     request: Request,
@@ -126,6 +129,7 @@ def search_events(
     "/issues",
     summary="이슈 검색",
     description="이슈만을 대상으로 검색합니다. 페이지 기반 페이지네이션을 사용합니다.",
+    responses={**RESPONSE_400},
 )
 def search_issues(
     request: Request,
@@ -162,6 +166,7 @@ def search_issues(
     "/posts",
     summary="게시글 검색",
     description="게시글만을 대상으로 검색합니다. 페이지 기반 페이지네이션을 사용합니다.",
+    responses={**RESPONSE_400},
 )
 def search_posts(
     request: Request,
