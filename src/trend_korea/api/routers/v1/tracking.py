@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Query, Request
 
 from trend_korea.api.deps import CurrentMemberUserId, DbSession
+from trend_korea.api.schemas.common import RESPONSE_401
 from trend_korea.application.events.service import EventService
 from trend_korea.application.issues.service import IssueService
 from trend_korea.application.tracking.service import TrackingService
@@ -11,14 +12,19 @@ from trend_korea.infrastructure.db.repositories.issue_repository import IssueRep
 router = APIRouter(prefix="/users/me", tags=["tracking"])
 
 
-@router.get("/tracked-issues")
+@router.get(
+    "/tracked-issues",
+    summary="추적 중인 이슈 목록",
+    description="내가 추적 중인 이슈 목록을 페이지 기반 페이지네이션으로 조회합니다. `Authorization: Bearer <token>` 필요.",
+    responses={**RESPONSE_401},
+)
 def tracked_issues(
     request: Request,
     db: DbSession,
     user_id: CurrentMemberUserId,
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=10, ge=1, le=100),
-    sortBy: str = Query(default="trackedAt"),
+    page: int = Query(default=1, ge=1, description="페이지 번호"),
+    limit: int = Query(default=10, ge=1, le=100, description="한 페이지에 조회할 항목 수"),
+    sortBy: str = Query(default="trackedAt", description="정렬 기준 필드 (trackedAt, latestTriggerAt)"),
 ):
     issue_repository = IssueRepository(db)
     service = TrackingService(
@@ -54,14 +60,19 @@ def tracked_issues(
     )
 
 
-@router.get("/saved-events")
+@router.get(
+    "/saved-events",
+    summary="저장한 사건 목록",
+    description="내가 저장한 사건 목록을 페이지 기반 페이지네이션으로 조회합니다. `Authorization: Bearer <token>` 필요.",
+    responses={**RESPONSE_401},
+)
 def saved_events(
     request: Request,
     db: DbSession,
     user_id: CurrentMemberUserId,
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=10, ge=1, le=100),
-    sortBy: str = Query(default="savedAt"),
+    page: int = Query(default=1, ge=1, description="페이지 번호"),
+    limit: int = Query(default=10, ge=1, le=100, description="한 페이지에 조회할 항목 수"),
+    sortBy: str = Query(default="savedAt", description="정렬 기준 필드 (savedAt, occurredAt)"),
 ):
     event_repository = EventRepository(db)
     service = TrackingService(

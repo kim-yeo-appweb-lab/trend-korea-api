@@ -32,15 +32,19 @@ def _build_search_response(*, items: list[dict], page: int, limit: int) -> dict:
     }
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="통합 검색",
+    description="사건, 이슈, 게시글을 통합 검색합니다. `tab` 파라미터로 검색 범위를 지정할 수 있습니다. 페이지 기반 페이지네이션을 사용합니다.",
+)
 def search(
     request: Request,
     db: DbSession,
-    q: str = Query(min_length=1),
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=10, ge=1, le=100),
-    tab: str = Query(default="all", pattern="^(all|events|issues|community)$"),
-    sortBy: str = Query(default="relevance"),
+    q: str = Query(min_length=1, description="검색어 (최소 1자)"),
+    page: int = Query(default=1, ge=1, description="페이지 번호"),
+    limit: int = Query(default=10, ge=1, le=100, description="한 페이지에 조회할 결과 수"),
+    tab: str = Query(default="all", pattern="^(all|events|issues|community)$", description="검색 범위 (all, events, issues, community)"),
+    sortBy: str = Query(default="relevance", description="정렬 기준 (relevance: 관련도, createdAt: 작성일)"),
 ):
     service = SearchService(SearchRepository(db))
     entity_type_map = {
@@ -82,14 +86,18 @@ def search(
     )
 
 
-@router.get("/events")
+@router.get(
+    "/events",
+    summary="사건 검색",
+    description="사건만을 대상으로 검색합니다. 페이지 기반 페이지네이션을 사용합니다.",
+)
 def search_events(
     request: Request,
     db: DbSession,
-    q: str = Query(min_length=1),
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=10, ge=1, le=100),
-    sortBy: str = Query(default="relevance"),
+    q: str = Query(min_length=1, description="검색어 (최소 1자)"),
+    page: int = Query(default=1, ge=1, description="페이지 번호"),
+    limit: int = Query(default=10, ge=1, le=100, description="한 페이지에 조회할 결과 수"),
+    sortBy: str = Query(default="relevance", description="정렬 기준 (relevance, createdAt)"),
 ):
     service = SearchService(SearchRepository(db))
     from trend_korea.core.pagination import encode_cursor
@@ -114,14 +122,18 @@ def search_events(
     )
 
 
-@router.get("/issues")
+@router.get(
+    "/issues",
+    summary="이슈 검색",
+    description="이슈만을 대상으로 검색합니다. 페이지 기반 페이지네이션을 사용합니다.",
+)
 def search_issues(
     request: Request,
     db: DbSession,
-    q: str = Query(min_length=1),
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=10, ge=1, le=100),
-    sortBy: str = Query(default="relevance"),
+    q: str = Query(min_length=1, description="검색어 (최소 1자)"),
+    page: int = Query(default=1, ge=1, description="페이지 번호"),
+    limit: int = Query(default=10, ge=1, le=100, description="한 페이지에 조회할 결과 수"),
+    sortBy: str = Query(default="relevance", description="정렬 기준 (relevance, createdAt)"),
 ):
     service = SearchService(SearchRepository(db))
     from trend_korea.core.pagination import encode_cursor
@@ -146,14 +158,18 @@ def search_issues(
     )
 
 
-@router.get("/posts")
+@router.get(
+    "/posts",
+    summary="게시글 검색",
+    description="게시글만을 대상으로 검색합니다. 페이지 기반 페이지네이션을 사용합니다.",
+)
 def search_posts(
     request: Request,
     db: DbSession,
-    q: str = Query(min_length=1),
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=10, ge=1, le=100),
-    sortBy: str = Query(default="relevance"),
+    q: str = Query(min_length=1, description="검색어 (최소 1자)"),
+    page: int = Query(default=1, ge=1, description="페이지 번호"),
+    limit: int = Query(default=10, ge=1, le=100, description="한 페이지에 조회할 결과 수"),
+    sortBy: str = Query(default="relevance", description="정렬 기준 (relevance, createdAt)"),
 ):
     service = SearchService(SearchRepository(db))
     from trend_korea.core.pagination import encode_cursor
