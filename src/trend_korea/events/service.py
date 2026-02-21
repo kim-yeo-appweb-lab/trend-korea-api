@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from trend_korea.core.exceptions import AppError
 from trend_korea.core.pagination import decode_cursor, encode_cursor
 from trend_korea.events.repository import EventRepository
 
@@ -61,6 +62,22 @@ class EventService:
         tag_ids: list[str],
         source_ids: list[str],
     ) -> dict:
+        if tag_ids:
+            count = self.repository.count_tags_by_ids(tag_ids)
+            if count != len(tag_ids):
+                raise AppError(
+                    code="E_VALID_002",
+                    message="존재하지 않는 태그가 포함되어 있습니다.",
+                    status_code=400,
+                )
+        if source_ids:
+            count = self.repository.count_sources_by_ids(source_ids)
+            if count != len(source_ids):
+                raise AppError(
+                    code="E_VALID_002",
+                    message="존재하지 않는 출처가 포함되어 있습니다.",
+                    status_code=400,
+                )
         event = self.repository.create_event(
             occurred_at=occurred_at,
             title=title,

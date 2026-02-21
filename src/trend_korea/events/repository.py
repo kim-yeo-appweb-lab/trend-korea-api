@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from trend_korea.db.enums import Importance, VerificationStatus
 from trend_korea.events.models import Event, event_tags, user_saved_events
 from trend_korea.sources.models import Source
+from trend_korea.tags.models import Tag
 
 
 class EventRepository:
@@ -212,6 +213,18 @@ class EventRepository:
             )
         ).all()
         return {row.event_id: row.saved_at for row in rows}
+
+    def count_tags_by_ids(self, tag_ids: list[str]) -> int:
+        if not tag_ids:
+            return 0
+        stmt = select(func.count(Tag.id)).where(Tag.id.in_(tag_ids))
+        return int(self.db.execute(stmt).scalar_one())
+
+    def count_sources_by_ids(self, source_ids: list[str]) -> int:
+        if not source_ids:
+            return 0
+        stmt = select(func.count(Source.id)).where(Source.id.in_(source_ids))
+        return int(self.db.execute(stmt).scalar_one())
 
     def count_saved_events(self, *, user_id: str) -> int:
         stmt = (
