@@ -122,6 +122,36 @@ src/trend_korea/
 - `service.py` — 비즈니스 로직
 - `repository.py` — 데이터 액세스
 
+## 테스트
+
+```bash
+# 전체 테스트 실행
+uv run pytest
+
+# 특정 도메인 테스트
+uv run pytest tests/test_auth.py -v
+
+# 커버리지 확인
+uv run pytest --cov=trend_korea
+```
+
+테스트는 SQLite in-memory DB를 사용하며, 트랜잭션 롤백으로 테스트 간 데이터를 격리합니다.
+
+| 테스트 파일 | 대상 도메인 |
+|------------|-----------|
+| `test_auth.py` | 인증 (회원가입, 로그인, 토큰 갱신, 탈퇴) |
+| `test_users.py` | 사용자 (프로필, 비밀번호 변경) |
+| `test_events.py` | 사건 (목록, 상세, 저장, 관리자 CRUD) |
+| `test_issues.py` | 이슈 (목록, 상세, 트래킹, 관리자 CRUD) |
+| `test_triggers.py` | 트리거 (관리자 수정/삭제) |
+| `test_community_posts.py` | 게시글 (CRUD, 좋아요/싫어요) |
+| `test_community_comments.py` | 댓글 (CRUD, 좋아요) |
+| `test_search.py` | 검색 (통합, 사건/이슈/게시글) |
+| `test_home.py` | 홈 (속보, 인기글, 트렌딩 등) |
+| `test_tags.py` | 태그 (목록, 관리자 CRUD) |
+| `test_sources.py` | 출처 (목록, 생성, 삭제) |
+| `test_tracking.py` | 트래킹 (추적 이슈, 저장 사건) |
+
 ## API 문서
 
 서버 실행 후 자동 생성되는 API 문서를 확인할 수 있습니다.
