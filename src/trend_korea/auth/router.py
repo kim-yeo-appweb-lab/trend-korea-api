@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Request
 
-from trend_korea.shared.dependencies import CurrentMemberUserId, DbSession
+from trend_korea.auth.repository import AuthRepository
 from trend_korea.auth.schemas import (
     LoginRequest,
     RefreshRequest,
@@ -11,11 +11,12 @@ from trend_korea.auth.schemas import (
     SocialLoginRequest,
     WithdrawRequest,
 )
-from trend_korea.shared.schemas import ErrorResponse, RESPONSE_400, RESPONSE_401
 from trend_korea.auth.service import AuthService
+from trend_korea.core.exceptions import AppError
 from trend_korea.core.response import success_response
-from trend_korea.core.security import hash_password
-from trend_korea.auth.repository import AuthRepository
+from trend_korea.core.security import hash_password, verify_password
+from trend_korea.shared.dependencies import CurrentMemberUserId, DbSession
+from trend_korea.shared.schemas import RESPONSE_400, RESPONSE_401, ErrorResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -224,8 +225,35 @@ def withdraw(
     db: DbSession,
     user_id: CurrentMemberUserId,
 ):
-    service = AuthService(AuthRepository(db))
+    repository = AuthRepository(db)
+    user = repository.get_user_by_id(user_id)
+    if user is None:
+        raise AppError(
+            code="E_RESOURCE_005",
+            message="사용자를 찾을 수 없습니다.",
+            status_code=404,
+        )
+
+    is_social_user = user.email.endswith("@social.trend-korea.local")
+    if not is_social_user:
+        if not payload.password:
+            raise AppError(
+                code="E_VALID_001",
+                message="비밀번호를 입력해주세요.",
+                status_code=400,
+            )
+        if not verify_password(payload.password, user.password_hash):
+            raise AppError(
+                code="E_AUTH_004",
+                message="비밀번호가 일치하지 않습니다.",
+                status_code=401,
+            )
+
+    service = AuthService(repository)
     service.logout(user_id=user_id)
+
+    user.withdrawn_at = datetime.now(timezone.utc)
+    user.is_active = False
     db.commit()
 
     return success_response(
