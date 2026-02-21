@@ -9,8 +9,8 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from trend_korea.infrastructure.db.models.news_channel import NewsChannel
-from trend_korea.infrastructure.db.session import SessionLocal
+from trend_korea.db.news_channel import NewsChannel
+from trend_korea.db.session import SessionLocal
 from trend_korea.keyword_crawler.headline_extractor import (
     extract_headlines,
     extract_headlines_from_rss,
@@ -182,7 +182,7 @@ def run_crawl(
 def save_to_db(output: CrawlOutput) -> int:
     """크롤링 결과를 crawled_keywords 테이블에 저장한다. 삽입된 행 수를 반환."""
     import uuid
-    from trend_korea.infrastructure.db.models.crawled_keyword import CrawledKeyword
+    from trend_korea.db.crawled_keyword import CrawledKeyword
 
     now = datetime.now(timezone.utc)
     raw = output.crawled_at.rstrip("Z")

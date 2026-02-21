@@ -6,7 +6,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from trend_korea.core.config import get_settings
-from trend_korea.infrastructure.db.models import Base
+from trend_korea.db import Base
 
 config = context.config
 if config.config_file_name is not None:

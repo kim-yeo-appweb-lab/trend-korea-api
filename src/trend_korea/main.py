@@ -4,13 +4,23 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from trend_korea.api.error_handlers import register_exception_handlers
-from trend_korea.api.routers.v1 import auth, community, events, home, issues, me, search, sources, tags, tracking, triggers, users
+from trend_korea.auth.router import router as auth_router
+from trend_korea.community.router import router as community_router
 from trend_korea.core.config import get_settings
 from trend_korea.core.logging import configure_logging
 from trend_korea.core.response import success_response
-from trend_korea.infrastructure.db.models import Base
-from trend_korea.infrastructure.db.session import engine
+from trend_korea.db import Base
+from trend_korea.db.session import engine
+from trend_korea.events.router import router as events_router
+from trend_korea.home.router import router as home_router
+from trend_korea.issues.router import router as issues_router
+from trend_korea.search.router import router as search_router
+from trend_korea.shared.error_handlers import register_exception_handlers
+from trend_korea.sources.router import router as sources_router
+from trend_korea.tags.router import router as tags_router
+from trend_korea.tracking.router import router as tracking_router
+from trend_korea.triggers.router import router as triggers_router
+from trend_korea.users.router import me_router, users_router
 
 settings = get_settings()
 
@@ -118,18 +128,18 @@ def health_ready(request: Request):
     return success_response(request=request, data={"status": "ok"})
 
 
-app.include_router(auth.router, prefix=settings.api_v1_prefix)
-app.include_router(me.router, prefix=settings.api_v1_prefix)
-app.include_router(events.router, prefix=settings.api_v1_prefix)
-app.include_router(issues.router, prefix=settings.api_v1_prefix)
-app.include_router(community.router, prefix=settings.api_v1_prefix)
-app.include_router(search.router, prefix=settings.api_v1_prefix)
-app.include_router(tracking.router, prefix=settings.api_v1_prefix)
-app.include_router(users.router, prefix=settings.api_v1_prefix)
-app.include_router(home.router, prefix=settings.api_v1_prefix)
-app.include_router(tags.router, prefix=settings.api_v1_prefix)
-app.include_router(sources.router, prefix=settings.api_v1_prefix)
-app.include_router(triggers.router, prefix=settings.api_v1_prefix)
+app.include_router(auth_router, prefix=settings.api_v1_prefix)
+app.include_router(me_router, prefix=settings.api_v1_prefix)
+app.include_router(events_router, prefix=settings.api_v1_prefix)
+app.include_router(issues_router, prefix=settings.api_v1_prefix)
+app.include_router(community_router, prefix=settings.api_v1_prefix)
+app.include_router(search_router, prefix=settings.api_v1_prefix)
+app.include_router(tracking_router, prefix=settings.api_v1_prefix)
+app.include_router(users_router, prefix=settings.api_v1_prefix)
+app.include_router(home_router, prefix=settings.api_v1_prefix)
+app.include_router(tags_router, prefix=settings.api_v1_prefix)
+app.include_router(sources_router, prefix=settings.api_v1_prefix)
+app.include_router(triggers_router, prefix=settings.api_v1_prefix)
 
 
 def run() -> None:

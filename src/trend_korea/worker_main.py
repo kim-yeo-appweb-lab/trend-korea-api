@@ -2,9 +2,9 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 from trend_korea.core.config import get_settings
 from trend_korea.core.logging import configure_logging
-from trend_korea.infrastructure.db.models import Base
-from trend_korea.infrastructure.db.session import engine
-from trend_korea.infrastructure.scheduler.jobs import (
+from trend_korea.db import Base
+from trend_korea.db.session import engine
+from trend_korea.scheduler.jobs import (
     cleanup_refresh_tokens,
     recalculate_community_hot_score,
     recalculate_search_rankings,
