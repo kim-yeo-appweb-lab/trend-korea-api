@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Query, Request
 
 from trend_korea.api.deps import CurrentAdminUserId, DbSession
+from trend_korea.api.schemas.common import ErrorResponse, RESPONSE_400, RESPONSE_401, RESPONSE_403_ADMIN
+from trend_korea.api.schemas.tags import CreateTagRequest, UpdateTagRequest
 from trend_korea.core.exceptions import AppError
 from trend_korea.core.response import success_response
 from trend_korea.infrastructure.db.repositories.tag_repository import TagRepository
@@ -10,12 +12,16 @@ from trend_korea.infrastructure.db.repositories.tag_repository import TagReposit
 router = APIRouter(prefix="/tags", tags=["tags"])
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="태그 목록 조회",
+    description="태그 목록을 조회합니다. 유형(category/region)으로 필터링하거나 이름으로 검색할 수 있습니다.",
+)
 def list_tags(
     request: Request,
     db: DbSession,
-    type: str = Query(default="all", pattern="^(all|category|region)$"),
-    search: str | None = Query(default=None),
+    type: str = Query(default="all", pattern="^(all|category|region)$", description="태그 유형 필터 (all, category, region)"),
+    search: str | None = Query(default=None, description="태그 이름 검색어"),
 ):
     repo = TagRepository(db)
     tags = repo.list_tags(tag_type=type, search=search)
@@ -34,21 +40,21 @@ def list_tags(
     )
 
 
-@router.post("")
+@router.post(
+    "",
+    summary="태그 생성 (관리자)",
+    description="새 태그를 등록합니다. **관리자 권한 필요.** `Authorization: Bearer <token>` 필요.",
+    status_code=201,
+    responses={**RESPONSE_400, **RESPONSE_401, **RESPONSE_403_ADMIN},
+)
 def create_tag(
-    payload: dict,
+    payload: CreateTagRequest,
     request: Request,
     db: DbSession,
     _: CurrentAdminUserId,
 ):
-    name = payload.get("name")
-    tag_type = payload.get("type")
-    slug = payload.get("slug")
-    if not name or tag_type not in {"category", "region"} or not slug:
-        raise AppError(code="E_VALID_001", message="필수 필드가 누락되었습니다.", status_code=400)
-
     repo = TagRepository(db)
-    created = repo.create_tag(name=name, tag_type=tag_type, slug=slug)
+    created = repo.create_tag(name=payload.name, tag_type=payload.type.value, slug=payload.slug)
     db.commit()
     return success_response(
         request=request,
@@ -64,10 +70,20 @@ def create_tag(
     )
 
 
-@router.patch("/{tag_id}")
+@router.patch(
+    "/{tag_id}",
+    summary="태그 수정 (관리자)",
+    description="태그 정보를 수정합니다. 변경할 필드만 전송합니다. **관리자 권한 필요.** `Authorization: Bearer <token>` 필요.",
+    responses={
+        **RESPONSE_400,
+        **RESPONSE_401,
+        **RESPONSE_403_ADMIN,
+        404: {"description": "태그를 찾을 수 없음 (`E_RESOURCE_006`)", "model": ErrorResponse},
+    },
+)
 def update_tag(
     tag_id: str,
-    payload: dict,
+    payload: UpdateTagRequest,
     request: Request,
     db: DbSession,
     _: CurrentAdminUserId,
@@ -77,7 +93,7 @@ def update_tag(
     if tag is None:
         raise AppError(code="E_RESOURCE_006", message="태그를 찾을 수 없습니다.", status_code=404)
 
-    updated = repo.update_tag(tag=tag, name=payload.get("name"), slug=payload.get("slug"))
+    updated = repo.update_tag(tag=tag, name=payload.name, slug=payload.slug)
     db.commit()
     return success_response(
         request=request,
@@ -92,7 +108,16 @@ def update_tag(
     )
 
 
-@router.delete("/{tag_id}")
+@router.delete(
+    "/{tag_id}",
+    summary="태그 삭제 (관리자)",
+    description="태그를 삭제합니다. **관리자 권한 필요.** `Authorization: Bearer <token>` 필요.",
+    responses={
+        **RESPONSE_401,
+        **RESPONSE_403_ADMIN,
+        404: {"description": "태그를 찾을 수 없음 (`E_RESOURCE_006`)", "model": ErrorResponse},
+    },
+)
 def delete_tag(tag_id: str, request: Request, db: DbSession, _: CurrentAdminUserId):
     repo = TagRepository(db)
     tag = repo.get_tag(tag_id)

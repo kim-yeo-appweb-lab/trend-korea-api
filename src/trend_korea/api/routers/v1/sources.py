@@ -3,6 +3,8 @@ from datetime import datetime
 from fastapi import APIRouter, Query, Request
 
 from trend_korea.api.deps import CurrentAdminUserId, DbSession
+from trend_korea.api.schemas.common import ErrorResponse, RESPONSE_400, RESPONSE_401, RESPONSE_403_ADMIN
+from trend_korea.api.schemas.sources import CreateSourceRequest
 from trend_korea.core.exceptions import AppError
 from trend_korea.core.response import success_response
 from trend_korea.infrastructure.db.repositories.source_repository import SourceRepository
@@ -10,13 +12,17 @@ from trend_korea.infrastructure.db.repositories.source_repository import SourceR
 router = APIRouter(prefix="/sources", tags=["sources"])
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="출처 목록 조회",
+    description="등록된 출처(뉴스 기사 등) 목록을 페이지 기반 페이지네이션으로 조회합니다. 발행 매체명으로 필터링할 수 있습니다.",
+)
 def list_sources(
     request: Request,
     db: DbSession,
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=20, ge=1, le=100),
-    publisher: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1, description="페이지 번호"),
+    limit: int = Query(default=20, ge=1, le=100, description="한 페이지에 조회할 항목 수"),
+    publisher: str | None = Query(default=None, description="발행 매체명 필터"),
 ):
     repo = SourceRepository(db)
     items, total = repo.list_sources(page=page, limit=limit, publisher=publisher)
@@ -48,22 +54,21 @@ def list_sources(
     )
 
 
-@router.post("")
-def create_source(payload: dict, request: Request, db: DbSession, _: CurrentAdminUserId):
-    url = payload.get("url")
-    title = payload.get("title")
-    publisher = payload.get("publisher")
-    published_at_raw = payload.get("publishedAt")
-    if not url or not title or not publisher or not published_at_raw:
-        raise AppError(code="E_VALID_001", message="필수 필드가 누락되었습니다.", status_code=400)
-
-    try:
-        published_at = datetime.fromisoformat(str(published_at_raw).replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise AppError(code="E_VALID_002", message="publishedAt 형식이 올바르지 않습니다.", status_code=400) from exc
-
+@router.post(
+    "",
+    summary="출처 등록 (관리자)",
+    description="새 출처(뉴스 기사 등)를 등록합니다. **관리자 권한 필요.** `Authorization: Bearer <token>` 필요.",
+    status_code=201,
+    responses={**RESPONSE_400, **RESPONSE_401, **RESPONSE_403_ADMIN},
+)
+def create_source(payload: CreateSourceRequest, request: Request, db: DbSession, _: CurrentAdminUserId):
     repo = SourceRepository(db)
-    created = repo.create_source(url=url, title=title, publisher=publisher, published_at=published_at)
+    created = repo.create_source(
+        url=payload.url,
+        title=payload.title,
+        publisher=payload.publisher,
+        published_at=payload.publishedAt,
+    )
     db.commit()
     return success_response(
         request=request,
@@ -80,7 +85,16 @@ def create_source(payload: dict, request: Request, db: DbSession, _: CurrentAdmi
     )
 
 
-@router.delete("/{source_id}")
+@router.delete(
+    "/{source_id}",
+    summary="출처 삭제 (관리자)",
+    description="출처를 삭제합니다. **관리자 권한 필요.** `Authorization: Bearer <token>` 필요.",
+    responses={
+        **RESPONSE_401,
+        **RESPONSE_403_ADMIN,
+        404: {"description": "출처를 찾을 수 없음 (`E_RESOURCE_007`)", "model": ErrorResponse},
+    },
+)
 def delete_source(source_id: str, request: Request, db: DbSession, _: CurrentAdminUserId):
     repo = SourceRepository(db)
     source = repo.get_source(source_id)

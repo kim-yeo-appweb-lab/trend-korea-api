@@ -3,6 +3,8 @@ from datetime import datetime
 from fastapi import APIRouter, Query, Request
 
 from trend_korea.api.deps import CurrentAdminUserId, CurrentMemberUserId, DbSession
+from trend_korea.api.schemas.common import ErrorResponse, RESPONSE_400, RESPONSE_401, RESPONSE_403_ADMIN
+from trend_korea.api.schemas.events import CreateEventRequest, UpdateEventRequest
 from trend_korea.application.events.service import EventService
 from trend_korea.core.exceptions import AppError
 from trend_korea.core.response import success_response
@@ -11,17 +13,21 @@ from trend_korea.infrastructure.db.repositories.event_repository import EventRep
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-@router.get("")
+@router.get(
+    "",
+    summary="사건 목록 조회",
+    description="커서 기반 페이지네이션으로 사건 목록을 조회합니다. 중요도, 날짜 범위로 필터링하고 정렬 기준을 지정할 수 있습니다.",
+)
 def list_events(
     request: Request,
     db: DbSession,
-    cursor: str | None = Query(default=None),
-    limit: int = Query(default=10, ge=1, le=100),
-    importance: str | None = Query(default=None, pattern="^(low|medium|high)$"),
-    startDate: datetime | None = Query(default=None),
-    endDate: datetime | None = Query(default=None),
-    sortBy: str = Query(default="occurredAt"),
-    order: str = Query(default="desc", pattern="^(asc|desc)$"),
+    cursor: str | None = Query(default=None, description="다음 페이지 커서 토큰"),
+    limit: int = Query(default=10, ge=1, le=100, description="한 페이지에 조회할 항목 수"),
+    importance: str | None = Query(default=None, pattern="^(low|medium|high)$", description="중요도 필터 (low, medium, high)"),
+    startDate: datetime | None = Query(default=None, description="조회 시작 날짜 (ISO 8601)"),
+    endDate: datetime | None = Query(default=None, description="조회 종료 날짜 (ISO 8601)"),
+    sortBy: str = Query(default="occurredAt", description="정렬 기준 필드 (occurredAt, createdAt)"),
+    order: str = Query(default="desc", pattern="^(asc|desc)$", description="정렬 방향 (asc, desc)"),
 ):
     service = EventService(EventRepository(db))
     sort = f"-{sortBy}" if order == "desc" else sortBy
@@ -48,7 +54,17 @@ def list_events(
     )
 
 
-@router.get("/{event_id}")
+@router.get(
+    "/{event_id}",
+    summary="사건 상세 조회",
+    description="사건 ID로 상세 정보를 조회합니다. 연관 태그, 출처 정보를 포함합니다.",
+    responses={
+        404: {
+            "description": "사건을 찾을 수 없음 (`E_RESOURCE_001`)",
+            "model": ErrorResponse,
+        },
+    },
+)
 def get_event(event_id: str, request: Request, db: DbSession):
     service = EventService(EventRepository(db))
     item = service.get_event(event_id)
@@ -57,7 +73,16 @@ def get_event(event_id: str, request: Request, db: DbSession):
     return success_response(request=request, data=item, message="조회 성공")
 
 
-@router.post("/{event_id}/save")
+@router.post(
+    "/{event_id}/save",
+    summary="사건 저장",
+    description="사건을 내 저장 목록에 추가합니다. `Authorization: Bearer <token>` 필요.",
+    responses={
+        **RESPONSE_401,
+        404: {"description": "사건을 찾을 수 없음 (`E_RESOURCE_001`)", "model": ErrorResponse},
+        409: {"description": "이미 저장된 사건 (`E_CONFLICT_003`)", "model": ErrorResponse},
+    },
+)
 def save_event(event_id: str, request: Request, db: DbSession, user_id: CurrentMemberUserId):
     service = EventService(EventRepository(db))
     if service.get_event(event_id) is None:
@@ -77,7 +102,15 @@ def save_event(event_id: str, request: Request, db: DbSession, user_id: CurrentM
     )
 
 
-@router.delete("/{event_id}/save")
+@router.delete(
+    "/{event_id}/save",
+    summary="사건 저장 해제",
+    description="저장된 사건을 내 저장 목록에서 제거합니다. `Authorization: Bearer <token>` 필요.",
+    responses={
+        **RESPONSE_401,
+        404: {"description": "사건을 찾을 수 없음 (`E_RESOURCE_001`)", "model": ErrorResponse},
+    },
+)
 def unsave_event(event_id: str, request: Request, db: DbSession, user_id: CurrentMemberUserId):
     service = EventService(EventRepository(db))
     if service.get_event(event_id) is None:
@@ -87,73 +120,51 @@ def unsave_event(event_id: str, request: Request, db: DbSession, user_id: Curren
     return success_response(request=request, data=None, message="사건 저장 해제 완료")
 
 
-@router.post("")
-def create_event(payload: dict, request: Request, db: DbSession, _: CurrentAdminUserId):
-    occurred_at_raw = payload.get("occurredAt")
-    title = payload.get("title")
-    summary = payload.get("summary")
-    importance = payload.get("importance")
-    verification_status = payload.get("verificationStatus")
-    tag_ids = payload.get("tagIds")
-    source_ids = payload.get("sourceIds")
-
-    if not occurred_at_raw or not title or not summary or not importance or not verification_status:
-        raise AppError(code="E_VALID_001", message="필수 필드가 누락되었습니다.", status_code=400)
-    if not isinstance(tag_ids, list) or len(tag_ids) > 3:
-        raise AppError(code="E_VALID_002", message="tagIds는 최대 3개까지 허용됩니다.", status_code=400)
-    if not isinstance(source_ids, list) or len(source_ids) < 1:
-        raise AppError(code="E_VALID_002", message="sourceIds는 최소 1개 필요합니다.", status_code=400)
-    if importance not in {"high", "medium", "low"}:
-        raise AppError(code="E_VALID_002", message="importance 값이 올바르지 않습니다.", status_code=400)
-    if verification_status not in {"verified", "unverified"}:
-        raise AppError(code="E_VALID_002", message="verificationStatus 값이 올바르지 않습니다.", status_code=400)
-
-    try:
-        occurred_at = datetime.fromisoformat(str(occurred_at_raw).replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise AppError(code="E_VALID_002", message="occurredAt 형식이 올바르지 않습니다.", status_code=400) from exc
-
+@router.post(
+    "",
+    summary="사건 생성 (관리자)",
+    description="새 사건을 등록합니다. **관리자 권한 필요.** `Authorization: Bearer <token>` 필요.",
+    status_code=201,
+    responses={**RESPONSE_400, **RESPONSE_401, **RESPONSE_403_ADMIN},
+)
+def create_event(payload: CreateEventRequest, request: Request, db: DbSession, _: CurrentAdminUserId):
     service = EventService(EventRepository(db))
     created = service.create_event(
-        occurred_at=occurred_at,
-        title=title,
-        summary=summary,
-        importance=importance,
-        verification_status=verification_status,
-        tag_ids=tag_ids,
-        source_ids=source_ids,
+        occurred_at=payload.occurredAt,
+        title=payload.title,
+        summary=payload.summary,
+        importance=payload.importance.value,
+        verification_status=payload.verificationStatus.value,
+        tag_ids=payload.tagIds,
+        source_ids=payload.sourceIds,
     )
 
     db.commit()
     return success_response(request=request, data=created, status_code=201, message="사건 생성 성공")
 
 
-@router.patch("/{event_id}")
-def update_event(event_id: str, payload: dict, request: Request, db: DbSession, _: CurrentAdminUserId):
+@router.patch(
+    "/{event_id}",
+    summary="사건 수정 (관리자)",
+    description="사건 정보를 수정합니다. 변경할 필드만 전송합니다. **관리자 권한 필요.** `Authorization: Bearer <token>` 필요.",
+    responses={
+        **RESPONSE_400,
+        **RESPONSE_401,
+        **RESPONSE_403_ADMIN,
+        404: {"description": "사건을 찾을 수 없음 (`E_RESOURCE_001`)", "model": ErrorResponse},
+    },
+)
+def update_event(event_id: str, payload: UpdateEventRequest, request: Request, db: DbSession, _: CurrentAdminUserId):
     service = EventService(EventRepository(db))
-    tag_ids = payload.get("tagIds")
-    source_ids = payload.get("sourceIds")
-
-    if tag_ids is not None and (not isinstance(tag_ids, list) or len(tag_ids) > 3):
-        raise AppError(code="E_VALID_002", message="tagIds는 최대 3개까지 허용됩니다.", status_code=400)
-    if source_ids is not None and (not isinstance(source_ids, list) or len(source_ids) < 1):
-        raise AppError(code="E_VALID_002", message="sourceIds는 최소 1개 필요합니다.", status_code=400)
-    if payload.get("importance") is not None and payload.get("importance") not in {"high", "medium", "low"}:
-        raise AppError(code="E_VALID_002", message="importance 값이 올바르지 않습니다.", status_code=400)
-    if (
-        payload.get("verificationStatus") is not None
-        and payload.get("verificationStatus") not in {"verified", "unverified"}
-    ):
-        raise AppError(code="E_VALID_002", message="verificationStatus 값이 올바르지 않습니다.", status_code=400)
 
     updated = service.update_event(
         event_id=event_id,
-        title=payload.get("title"),
-        summary=payload.get("summary"),
-        importance=payload.get("importance"),
-        verification_status=payload.get("verificationStatus"),
-        tag_ids=tag_ids,
-        source_ids=source_ids,
+        title=payload.title,
+        summary=payload.summary,
+        importance=payload.importance.value if payload.importance is not None else None,
+        verification_status=payload.verificationStatus.value if payload.verificationStatus is not None else None,
+        tag_ids=payload.tagIds,
+        source_ids=payload.sourceIds,
     )
     if updated is None:
         raise AppError(code="E_RESOURCE_001", message="사건을 찾을 수 없습니다.", status_code=404)
@@ -171,7 +182,16 @@ def update_event(event_id: str, payload: dict, request: Request, db: DbSession, 
     )
 
 
-@router.delete("/{event_id}")
+@router.delete(
+    "/{event_id}",
+    summary="사건 삭제 (관리자)",
+    description="사건을 삭제합니다. **관리자 권한 필요.** `Authorization: Bearer <token>` 필요.",
+    responses={
+        **RESPONSE_401,
+        **RESPONSE_403_ADMIN,
+        404: {"description": "사건을 찾을 수 없음 (`E_RESOURCE_001`)", "model": ErrorResponse},
+    },
+)
 def delete_event(event_id: str, request: Request, db: DbSession, _: CurrentAdminUserId):
     service = EventService(EventRepository(db))
     ok = service.delete_event(event_id=event_id)

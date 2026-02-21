@@ -1,21 +1,30 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Request
 
 from trend_korea.api.deps import CurrentAdminUserId, DbSession
+from trend_korea.api.schemas.common import ErrorResponse, RESPONSE_400, RESPONSE_401, RESPONSE_403_ADMIN
+from trend_korea.api.schemas.triggers import UpdateTriggerRequest
 from trend_korea.core.exceptions import AppError
 from trend_korea.core.response import success_response
-from trend_korea.domain.enums import TriggerType
 from trend_korea.infrastructure.db.repositories.issue_repository import IssueRepository
 from trend_korea.infrastructure.db.repositories.trigger_repository import TriggerRepository
 
 router = APIRouter(prefix="/triggers", tags=["triggers"])
 
 
-@router.patch("/{trigger_id}")
+@router.patch(
+    "/{trigger_id}",
+    summary="트리거 수정 (관리자)",
+    description="트리거(사건 경과) 정보를 수정합니다. 변경할 필드만 전송합니다. **관리자 권한 필요.** `Authorization: Bearer <token>` 필요.",
+    responses={
+        **RESPONSE_400,
+        **RESPONSE_401,
+        **RESPONSE_403_ADMIN,
+        404: {"description": "트리거를 찾을 수 없음 (`E_RESOURCE_005`)", "model": ErrorResponse},
+    },
+)
 def update_trigger(
     trigger_id: str,
-    payload: dict,
+    payload: UpdateTriggerRequest,
     request: Request,
     db: DbSession,
     _: CurrentAdminUserId,
@@ -25,26 +34,11 @@ def update_trigger(
     if trigger is None:
         raise AppError(code="E_RESOURCE_005", message="트리거를 찾을 수 없습니다.", status_code=404)
 
-    trigger_type = payload.get("type")
-    occurred_at = payload.get("occurredAt")
-    parsed_occurred_at = None
-    if occurred_at is not None:
-        try:
-            parsed_occurred_at = datetime.fromisoformat(str(occurred_at).replace("Z", "+00:00"))
-        except ValueError as exc:
-            raise AppError(code="E_VALID_002", message="occurredAt 형식이 올바르지 않습니다.", status_code=400) from exc
-
-    if trigger_type is not None:
-        try:
-            TriggerType(trigger_type)
-        except ValueError as exc:
-            raise AppError(code="E_VALID_002", message="type 값이 올바르지 않습니다.", status_code=400) from exc
-
     updated = repo.update_trigger(
         trigger=trigger,
-        summary=payload.get("summary"),
-        trigger_type=trigger_type,
-        occurred_at=parsed_occurred_at,
+        summary=payload.summary,
+        trigger_type=payload.type.value if payload.type is not None else None,
+        occurred_at=payload.occurredAt,
     )
     db.commit()
 
@@ -59,7 +53,16 @@ def update_trigger(
     )
 
 
-@router.delete("/{trigger_id}")
+@router.delete(
+    "/{trigger_id}",
+    summary="트리거 삭제 (관리자)",
+    description="트리거를 삭제합니다. 삭제 후 이슈의 최신 트리거 일시가 자동 갱신됩니다. **관리자 권한 필요.** `Authorization: Bearer <token>` 필요.",
+    responses={
+        **RESPONSE_401,
+        **RESPONSE_403_ADMIN,
+        404: {"description": "트리거를 찾을 수 없음 (`E_RESOURCE_005`)", "model": ErrorResponse},
+    },
+)
 def delete_trigger(trigger_id: str, request: Request, db: DbSession, _: CurrentAdminUserId):
     repo = TriggerRepository(db)
     trigger = repo.get_trigger(trigger_id)
