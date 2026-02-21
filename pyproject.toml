@@ -36,18 +36,16 @@ crawler = [
 ]
 
 [project.scripts]
-trend-korea-api = "trend_korea.main:run"
-trend-korea-worker = "trend_korea.worker_main:run"
-trend-korea-crawl-keywords = "trend_korea.keyword_crawler.cli:main"
-
-[tool.setuptools]
-package-dir = {"" = "src"}
+trend-korea-api = "src.main:run"
+trend-korea-worker = "src.worker_main:run"
+trend-korea-crawl-keywords = "src.keyword_crawler.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["src*"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["."]
 addopts = "-q"
 
 [tool.ruff]

@@ -80,7 +80,7 @@ class TestSearchRankings:
         from datetime import datetime, timezone
         from uuid import uuid4
 
-        from trend_korea.search.models import SearchRanking
+        from src.models.search import SearchRanking
 
         for i in range(3):
             ranking = SearchRanking(

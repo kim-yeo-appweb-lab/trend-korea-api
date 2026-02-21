@@ -25,7 +25,9 @@ def test_list_comments_데이터있음(
 ):
     """댓글이 있으면 목록에 포함"""
     post = create_post(author_id=member_user["user"].id)
-    comment = create_comment(post_id=post.id, author_id=member_user["user"].id, content="테스트 댓글")
+    comment = create_comment(
+        post_id=post.id, author_id=member_user["user"].id, content="테스트 댓글"
+    )
 
     resp = client.get(f"/api/v1/posts/{post.id}/comments")
     assert resp.status_code == 200
@@ -62,9 +64,7 @@ def test_create_comment_성공(client: TestClient, member_user: dict, create_pos
     assert body["data"]["parentId"] is None
 
 
-def test_create_comment_대댓글(
-    client: TestClient, member_user: dict, create_post, create_comment
-):
+def test_create_comment_대댓글(client: TestClient, member_user: dict, create_post, create_comment):
     """parentId를 지정하면 대댓글 생성"""
     post = create_post(author_id=member_user["user"].id)
     parent = create_comment(post_id=post.id, author_id=member_user["user"].id, content="부모 댓글")
@@ -141,7 +141,9 @@ def test_update_comment_다른사용자_403(
 ):
     """다른 사용자가 댓글 수정 시도하면 403"""
     post = create_post(author_id=admin_user["user"].id)
-    comment = create_comment(post_id=post.id, author_id=admin_user["user"].id, content="관리자 댓글")
+    comment = create_comment(
+        post_id=post.id, author_id=admin_user["user"].id, content="관리자 댓글"
+    )
     headers = {"Authorization": f"Bearer {member_user['token']}"}
 
     resp = client.patch(
@@ -214,7 +216,9 @@ def test_delete_comment_정상삭제(
 ):
     """작성자 본인이 댓글 삭제"""
     post = create_post(author_id=member_user["user"].id)
-    comment = create_comment(post_id=post.id, author_id=member_user["user"].id, content="삭제할 댓글")
+    comment = create_comment(
+        post_id=post.id, author_id=member_user["user"].id, content="삭제할 댓글"
+    )
     headers = {"Authorization": f"Bearer {member_user['token']}"}
 
     resp = client.delete(f"/api/v1/comments/{comment.id}", headers=headers)
@@ -230,7 +234,9 @@ def test_delete_comment_다른사용자_403(
 ):
     """다른 사용자가 댓글 삭제 시도하면 403"""
     post = create_post(author_id=admin_user["user"].id)
-    comment = create_comment(post_id=post.id, author_id=admin_user["user"].id, content="관리자 댓글")
+    comment = create_comment(
+        post_id=post.id, author_id=admin_user["user"].id, content="관리자 댓글"
+    )
     headers = {"Authorization": f"Bearer {member_user['token']}"}
 
     resp = client.delete(f"/api/v1/comments/{comment.id}", headers=headers)
@@ -276,9 +282,7 @@ def test_delete_comment_토큰없음_401(
 # ── POST /api/v1/comments/{id}/like ──
 
 
-def test_like_comment_성공(
-    client: TestClient, member_user: dict, create_post, create_comment
-):
+def test_like_comment_성공(client: TestClient, member_user: dict, create_post, create_comment):
     """댓글 좋아요 성공"""
     post = create_post(author_id=member_user["user"].id)
     comment = create_comment(post_id=post.id, author_id=member_user["user"].id)
@@ -322,9 +326,7 @@ def test_like_comment_토큰없음_401(
 # ── DELETE /api/v1/comments/{id}/like ──
 
 
-def test_unlike_comment_성공(
-    client: TestClient, member_user: dict, create_post, create_comment
-):
+def test_unlike_comment_성공(client: TestClient, member_user: dict, create_post, create_comment):
     """댓글 좋아요 취소 성공"""
     post = create_post(author_id=member_user["user"].id)
     comment = create_comment(post_id=post.id, author_id=member_user["user"].id)

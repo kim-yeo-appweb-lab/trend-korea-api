@@ -4,8 +4,6 @@ from uuid import uuid4
 
 from starlette.testclient import TestClient
 
-from trend_korea.core.security import create_access_token, create_refresh_token
-
 
 # ── POST /api/v1/auth/register ──
 

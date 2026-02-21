@@ -2,7 +2,6 @@
 
 from uuid import uuid4
 
-from sqlalchemy.orm import Session
 from starlette.testclient import TestClient
 
 

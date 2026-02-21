@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from starlette.testclient import TestClient
 
-from trend_korea.db.enums import IssueStatus, SourceEntityType
+from src.db.enums import IssueStatus, SourceEntityType
 
 API = "/api/v1/issues"
 
@@ -301,9 +301,7 @@ class TestCreateTrigger:
     def _source(self, create_source):
         return create_source(entity_type=SourceEntityType.TRIGGER)
 
-    def test_create_trigger_success(
-        self, client: TestClient, create_issue, admin_headers, _source
-    ):
+    def test_create_trigger_success(self, client: TestClient, create_issue, admin_headers, _source):
         """관리자가 트리거 정상 생성 201"""
         issue = create_issue()
         payload = {

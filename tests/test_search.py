@@ -17,11 +17,15 @@ def test_search_빈결과(client: TestClient):
     assert body["data"]["pagination"]["totalItems"] == 0
 
 
-def test_search_검색어일치(client: TestClient, create_event, create_issue, member_user, create_post):
+def test_search_검색어일치(
+    client: TestClient, create_event, create_issue, member_user, create_post
+):
     """검색어와 일치하는 사건, 이슈, 게시글이 검색됨"""
     create_event(title="대한민국 경제 위기", summary="경제 관련 사건")
     create_issue(title="대한민국 정치 이슈", description="정치 관련 이슈")
-    create_post(author_id=member_user["user"].id, title="대한민국 사회 이야기", content="사회 이야기")
+    create_post(
+        author_id=member_user["user"].id, title="대한민국 사회 이야기", content="사회 이야기"
+    )
 
     resp = client.get("/api/v1/search", params={"q": "대한민국"})
     assert resp.status_code == 200

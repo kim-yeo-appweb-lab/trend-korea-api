@@ -5,7 +5,7 @@ from uuid import uuid4
 import pytest
 from starlette.testclient import TestClient
 
-from trend_korea.db.enums import Importance, SourceEntityType
+from src.db.enums import Importance
 
 API = "/api/v1/events"
 

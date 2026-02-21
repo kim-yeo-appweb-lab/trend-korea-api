@@ -15,9 +15,9 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 from starlette.testclient import TestClient
 
-from trend_korea.core.security import create_access_token, hash_password
-from trend_korea.db import Base
-from trend_korea.db.enums import (
+from src.core.security import create_access_token, hash_password
+from src.db import Base
+from src.db.enums import (
     Importance,
     IssueStatus,
     SourceEntityType,
@@ -26,8 +26,8 @@ from trend_korea.db.enums import (
     UserRole,
     VerificationStatus,
 )
-from trend_korea.main import app
-from trend_korea.shared.dependencies import get_db_session
+from src.main import app
+from src.utils.dependencies import get_db_session
 
 # SQLite in-memory 엔진 (StaticPool로 커넥션 공유)
 engine = create_engine(
@@ -93,7 +93,7 @@ _TEST_PASSWORD = "TestP@ss1234"
 @pytest.fixture()
 def member_user(db_session: Session) -> dict:
     """일반 사용자를 생성하고 {user, token, password}를 반환"""
-    from trend_korea.users.models import User
+    from src.models.users import User
 
     user_id = str(uuid4())
     now = datetime.now(timezone.utc)
@@ -117,7 +117,7 @@ def member_user(db_session: Session) -> dict:
 @pytest.fixture()
 def admin_user(db_session: Session) -> dict:
     """관리자 사용자를 생성하고 {user, token, password}를 반환"""
-    from trend_korea.users.models import User
+    from src.models.users import User
 
     user_id = str(uuid4())
     now = datetime.now(timezone.utc)
@@ -154,7 +154,7 @@ def admin_headers(admin_user: dict) -> dict[str, str]:
 @pytest.fixture()
 def create_tag(db_session: Session):
     """태그 팩토리: create_tag(name, tag_type, slug) -> Tag"""
-    from trend_korea.tags.models import Tag
+    from src.models.tags import Tag
 
     def _factory(
         name: str = "테스트태그",
@@ -178,7 +178,7 @@ def create_tag(db_session: Session):
 @pytest.fixture()
 def create_source(db_session: Session):
     """출처 팩토리: create_source(...) -> Source"""
-    from trend_korea.sources.models import Source
+    from src.models.sources import Source
 
     def _factory(
         url: str = "https://example.com/news",
@@ -206,7 +206,7 @@ def create_source(db_session: Session):
 @pytest.fixture()
 def create_event(db_session: Session):
     """사건 팩토리: create_event(...) -> Event"""
-    from trend_korea.events.models import Event
+    from src.models.events import Event
 
     def _factory(
         title: str = "테스트 사건",
@@ -236,7 +236,7 @@ def create_event(db_session: Session):
 @pytest.fixture()
 def create_issue(db_session: Session):
     """이슈 팩토리: create_issue(...) -> Issue"""
-    from trend_korea.issues.models import Issue
+    from src.models.issues import Issue
 
     def _factory(
         title: str = "테스트 이슈",
@@ -264,7 +264,7 @@ def create_issue(db_session: Session):
 @pytest.fixture()
 def create_trigger(db_session: Session):
     """트리거 팩토리: create_trigger(issue_id, ...) -> Trigger"""
-    from trend_korea.triggers.models import Trigger
+    from src.models.triggers import Trigger
 
     def _factory(
         issue_id: str,
@@ -291,7 +291,7 @@ def create_trigger(db_session: Session):
 @pytest.fixture()
 def create_post(db_session: Session):
     """게시글 팩토리: create_post(author_id, ...) -> Post"""
-    from trend_korea.community.models import Post
+    from src.models.community import Post
 
     def _factory(
         author_id: str,
@@ -321,7 +321,7 @@ def create_post(db_session: Session):
 @pytest.fixture()
 def create_comment(db_session: Session):
     """댓글 팩토리: create_comment(post_id, author_id, ...) -> Comment"""
-    from trend_korea.community.models import Comment
+    from src.models.community import Comment
 
     def _factory(
         post_id: str,

@@ -5,9 +5,9 @@
 대한민국 사회 이슈·사건을 추적·분석하는 FastAPI 백엔드 API.
 
 진입점 3개:
-- `trend-korea-api` → `src/trend_korea/main.py:run`
-- `trend-korea-worker` → `src/trend_korea/worker_main.py:run`
-- `trend-korea-crawl-keywords` → `src/trend_korea/keyword_crawler/cli.py:main`
+- `trend-korea-api` → `src/main.py:run`
+- `trend-korea-worker` → `src/worker_main.py:run`
+- `trend-korea-crawl-keywords` → `src/keyword_crawler/cli.py:main`
 
 ## 기술 스택
 
@@ -23,43 +23,39 @@
 
 ## 아키텍처
 
-도메인 기반(Domain-based) 폴더 구조를 사용합니다.
+레이어 기반(Layer-based) 폴더 구조를 사용합니다.
 
 ```
-src/trend_korea/
-├── core/              # 설정(config.py), 로깅, 공통 응답
-├── db/                # Base 모델, 세션, 공유 모델 + 배럴 import
-├── shared/            # 에러 핸들러, 페이지네이션 등 공용 유틸
-├── auth/              # 인증 도메인
-├── users/             # 사용자 도메인
-├── events/            # 사건 도메인
-├── issues/            # 이슈 도메인
-├── community/         # 커뮤니티 도메인 (게시글, 댓글)
-├── search/            # 검색 도메인
-├── tracking/          # 트래킹 도메인
-├── home/              # 홈 도메인
-├── tags/              # 태그 도메인
-├── sources/           # 출처 도메인
-├── triggers/          # 트리거 도메인
+src/
+├── main.py            # FastAPI 앱 진입점
+├── worker_main.py     # APScheduler 워커 진입점
+├── api/v1/            # 라우터 (엔드포인트)
+├── models/            # SQLAlchemy 2.0 모델
+├── schemas/           # Pydantic V2 요청/응답 스키마
+├── crud/              # 비즈니스 로직 (서비스)
+├── sql/               # 데이터 액세스 계층 (레포지토리)
+├── core/              # 설정, 보안, 예외, 로깅, 페이지네이션
+├── db/                # Base 모델, 세션, enum, 배럴 import
+├── utils/             # 의존성 주입, 에러 핸들러, 소셜 인증
 ├── scheduler/         # 스케줄러 잡 정의
 └── keyword_crawler/   # 뉴스 키워드 크롤러
 ```
 
-### 도메인 디렉터리 패턴
+### 레이어 디렉터리 패턴
 
-각 도메인은 다음 파일로 구성됩니다:
-- `router.py` — FastAPI 라우터 (엔드포인트)
-- `schemas.py` — Pydantic V2 요청/응답 스키마
-- `models.py` — SQLAlchemy 2.0 모델
-- `service.py` — 비즈니스 로직
-- `repository.py` — 데이터 액세스 계층
+각 레이어는 도메인별 파일로 구성됩니다:
+- `api/v1/{domain}.py` — FastAPI 라우터 (엔드포인트)
+- `schemas/{domain}.py` — Pydantic V2 요청/응답 스키마
+- `models/{domain}.py` — SQLAlchemy 2.0 모델
+- `crud/{domain}.py` — 비즈니스 로직
+- `sql/{domain}.py` — 데이터 액세스 계층
 
 ### 공유 레이어
 
 - `core/config.py` — pydantic-settings 기반 환경변수 (`Settings` 클래스)
 - `db/__init__.py` — 모든 모델 배럴 import (Alembic이 모델을 인식하기 위해 필수)
 - `db/session.py` — SQLAlchemy 엔진·세션 팩토리
-- `shared/` — 도메인 간 공용 유틸리티
+- `utils/` — 의존성 주입, 에러 핸들러, 소셜 인증 등 공용 유틸리티
 
 ## 주요 컨벤션
 
@@ -73,18 +69,24 @@ src/trend_korea/
 
 ### Import 규칙
 
-- 도메인 간 참조: `from trend_korea.{domain}.{module} import ...`
+- 레이어 참조: `from src.{layer}.{domain} import ...`
+- 예시:
+  - `from src.models.users import User`
+  - `from src.schemas.events import CreateEventRequest`
+  - `from src.crud.issues import IssueService`
+  - `from src.sql.auth import AuthRepository`
+  - `from src.api.v1.auth import router`
 - ForeignKey는 테이블명 문자열 참조: `ForeignKey("users.id")`
 - `db/__init__.py`에서 모든 모델을 배럴 import (새 모델 추가 시 반드시 등록)
 - import 순서: 표준 라이브러리 → 외부 패키지 → 프로젝트 내부
 
 ### 파일 명명
 
-- 모델: `{domain}/models.py`
-- 스키마: `{domain}/schemas.py`
-- 라우터: `{domain}/router.py`
-- 서비스: `{domain}/service.py`
-- 저장소: `{domain}/repository.py`
+- 모델: `models/{domain}.py`
+- 스키마: `schemas/{domain}.py`
+- 라우터: `api/v1/{domain}.py`
+- 서비스: `crud/{domain}.py`
+- 저장소: `sql/{domain}.py`
 
 ## 커밋 규칙
 
@@ -136,7 +138,7 @@ uv run pytest
 uv run pytest tests/test_auth.py -v
 
 # 커버리지
-uv run pytest --cov=trend_korea
+uv run pytest --cov=src
 ```
 
 테스트 스택: pytest + httpx (sync TestClient)

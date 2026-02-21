@@ -1,6 +1,6 @@
 # 태그 도메인 API 테스트
 
-from trend_korea.db.enums import TagType
+from src.db.enums import TagType
 
 
 class TestListTags:
