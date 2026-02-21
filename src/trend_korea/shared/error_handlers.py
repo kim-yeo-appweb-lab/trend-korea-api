@@ -1,8 +1,12 @@
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 
 from trend_korea.core.exceptions import AppError
 from trend_korea.core.response import error_response
+
+logger = logging.getLogger(__name__)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -46,7 +50,8 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(Exception)
-    async def _handle_unexpected_error(request: Request, _: Exception):
+    async def _handle_unexpected_error(request: Request, exc: Exception):
+        logger.exception("처리되지 않은 예외 발생 [%s %s]", request.method, request.url.path)
         return error_response(
             code="E_SERVER_001",
             message="서버 내부 오류가 발생했습니다.",
