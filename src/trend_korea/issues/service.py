@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from trend_korea.core.exceptions import AppError
 from trend_korea.core.pagination import decode_cursor, encode_cursor
@@ -147,7 +147,7 @@ class IssueService:
 
     def track_issue(self, *, user_id: str, issue_id: str) -> tuple[bool, str | None]:
         tracked = self.repository.track_for_user(user_id=user_id, issue_id=issue_id)
-        return tracked, self._to_iso(datetime.utcnow())
+        return tracked, self._to_iso(datetime.now(timezone.utc))
 
     def untrack_issue(self, *, user_id: str, issue_id: str) -> bool:
         return self.repository.untrack_for_user(user_id=user_id, issue_id=issue_id)

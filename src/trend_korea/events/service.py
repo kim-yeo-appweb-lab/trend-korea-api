@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from trend_korea.core.exceptions import AppError
 from trend_korea.core.pagination import decode_cursor, encode_cursor
@@ -46,7 +46,7 @@ class EventService:
 
     def save_event(self, *, user_id: str, event_id: str) -> tuple[bool, str | None]:
         saved = self.repository.save_for_user(user_id=user_id, event_id=event_id)
-        return saved, self._to_iso(datetime.utcnow())
+        return saved, self._to_iso(datetime.now(timezone.utc))
 
     def unsave_event(self, *, user_id: str, event_id: str) -> bool:
         return self.repository.unsave_for_user(user_id=user_id, event_id=event_id)

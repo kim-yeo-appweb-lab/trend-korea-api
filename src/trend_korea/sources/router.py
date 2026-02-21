@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Query, Request
 
@@ -78,7 +78,7 @@ def create_source(payload: CreateSourceRequest, request: Request, db: DbSession,
             "url": created.url,
             "publisher": created.publisher,
             "publishedAt": created.published_at.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-            "createdAt": datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+            "createdAt": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
         },
         status_code=201,
         message="출처 등록 성공",
