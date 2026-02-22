@@ -18,7 +18,7 @@
 - DB: **PostgreSQL 16**
 - 마이그레이션: **Alembic**
 - 스케줄러: **APScheduler**
-- 인증: **JWT** (python-jose, passlib[bcrypt])
+- 인증: **JWT** (python-jose, bcrypt)
 - 린터: **ruff** (line-length=100, target=py311)
 
 ## 아키텍처
@@ -53,9 +53,20 @@ src/
 ### 공유 레이어
 
 - `core/config.py` — pydantic-settings 기반 환경변수 (`Settings` 클래스)
+- `core/security.py` — 비밀번호 해싱, JWT 토큰 검증
+- `core/exceptions.py` — 커스텀 `AppError` 예외 클래스
+- `core/response.py` — 표준 응답 래퍼 (`success_response`)
+- `core/pagination.py` — 커서 기반 페이지네이션 유틸리티
 - `db/__init__.py` — 모든 모델 배럴 import (Alembic이 모델을 인식하기 위해 필수)
 - `db/session.py` — SQLAlchemy 엔진·세션 팩토리
-- `utils/` — 의존성 주입, 에러 핸들러, 소셜 인증 등 공용 유틸리티
+- `db/enums.py` — 공유 Enum 정의
+- `utils/dependencies.py` — `DbSession`, `CurrentMemberUserId`, `CurrentAdminUserId`
+- `utils/error_handlers.py` — 글로벌 예외 핸들러
+- `utils/social/` — 소셜 인증 프로바이더 (카카오, 네이버, 구글)
+
+### 도메인 목록
+
+`auth` | `users` | `events` | `issues` | `triggers` | `community` | `search` | `tracking` | `home` | `tags` | `sources`
 
 ## 주요 컨벤션
 
@@ -87,6 +98,40 @@ src/
 - 라우터: `api/v1/{domain}.py`
 - 서비스: `crud/{domain}.py`
 - 저장소: `sql/{domain}.py`
+
+### 응답 형식
+
+성공: `{"success": true, "data": {...}, "message": "...", "timestamp": "..."}`
+에러: `{"success": false, "error": {"code": "E_XXX_000", "message": "..."}, "timestamp": "..."}`
+
+### 에러 코드 접두사
+
+- `E_AUTH_` — 인증 (비밀번호 오류, 토큰 만료/무효)
+- `E_PERM_` — 권한 (작성자 아님, 관리자 필요)
+- `E_VALID_` — 검증 (필수 필드 누락, 포맷 오류)
+- `E_RESOURCE_` — 리소스 미존재 (001~007: event, issue, post, comment, user, tag, trigger)
+- `E_CONFLICT_` — 충돌 (이메일 중복, 이미 추적/저장)
+- `E_SERVER_` — 서버 내부 오류
+
+### 페이지네이션
+
+- 커서 기반: 사건(events), 커뮤니티(community), 검색(search) — `cursor`, `limit`
+- 페이지 기반: 이슈(issues), 출처(sources), 트래킹(tracking) — `page`, `limit`
+
+### 인증 구조
+
+- JWT HS256, Access Token 60분, Refresh Token 14일
+- 권한: Public (비인증) / Member (Bearer) / Admin (Bearer + admin 역할)
+- SNS 로그인: 카카오, 네이버, 구글 (OAuth)
+
+## 스케줄러 잡
+
+| 잡 이름 | 주기 | 설명 |
+|---------|------|------|
+| `issue_status_reconcile` | 30분 | 이슈 상태 조정 |
+| `search_rankings` | 매시 정각 | 검색 랭킹 재계산 |
+| `community_hot_score` | 10분 | 인기 게시글 점수 업데이트 |
+| `cleanup_refresh_tokens` | 매일 03:00 | 만료 토큰 정리 |
 
 ## 커밋 규칙
 
