@@ -5,6 +5,7 @@ from src.models.community import Comment, CommentLike, Post, PostVote, post_tags
 from src.db.crawled_keyword import CrawledKeyword
 from src.db.job import JobRun
 from src.db.news_channel import NewsChannel
+from src.db.news_summary import NewsSummaryBatch, NewsKeywordSummary, NewsSummaryTag
 from src.models.events import Event, event_tags, user_saved_events
 from src.models.issues import Issue, issue_events, issue_tags, user_tracked_issues
 from src.models.search import SearchHistory, SearchRanking
@@ -32,6 +33,9 @@ __all__ = [
     "JobRun",
     "NewsChannel",
     "CrawledKeyword",
+    "NewsSummaryBatch",
+    "NewsKeywordSummary",
+    "NewsSummaryTag",
     "event_tags",
     "issue_tags",
     "issue_events",

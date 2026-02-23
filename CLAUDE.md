@@ -4,10 +4,13 @@
 
 대한민국 사회 이슈·사건을 추적·분석하는 FastAPI 백엔드 API.
 
-진입점 3개:
+진입점 6개:
 - `trend-korea-api` → `src/main.py:run`
 - `trend-korea-worker` → `src/worker_main.py:run`
-- `trend-korea-crawl-keywords` → `src/keyword_crawler/cli.py:main`
+- `trend-korea-crawl-keywords` → `src/utils/keyword_crawler/cli.py:main`
+- `trend-korea-crawl-news` → `src/utils/news_crawler/cli.py:main`
+- `trend-korea-summarize-news` → `src/utils/news_summarizer/cli.py:main`
+- `trend-korea-full-cycle` → `src/utils/pipeline/cli.py:main`
 
 ## 기술 스택
 
@@ -36,9 +39,15 @@ src/
 ├── sql/               # 데이터 액세스 계층 (레포지토리)
 ├── core/              # 설정, 보안, 예외, 로깅, 페이지네이션
 ├── db/                # Base 모델, 세션, enum, 배럴 import
-├── utils/             # 의존성 주입, 에러 핸들러, 소셜 인증
-├── scheduler/         # 스케줄러 잡 정의
-└── keyword_crawler/   # 뉴스 키워드 크롤러
+├── utils/             # 공용 유틸리티 + 파이프라인 모듈
+│   ├── dependencies.py          # 의존성 주입
+│   ├── error_handlers.py        # 에러 핸들러
+│   ├── social/                  # 소셜 인증
+│   ├── keyword_crawler/         # 뉴스 키워드 크롤러
+│   ├── news_crawler/            # 외부 뉴스 파이프라인 래퍼
+│   ├── news_summarizer/         # Ollama LLM 뉴스 요약
+│   └── pipeline/                # 전체 파이프라인 오케스트레이터
+└── scheduler/         # 스케줄러 잡 정의
 ```
 
 ### 레이어 디렉터리 패턴
@@ -63,6 +72,10 @@ src/
 - `utils/dependencies.py` — `DbSession`, `CurrentMemberUserId`, `CurrentAdminUserId`
 - `utils/error_handlers.py` — 글로벌 예외 핸들러
 - `utils/social/` — 소셜 인증 프로바이더 (카카오, 네이버, 구글)
+- `utils/keyword_crawler/` — 뉴스 키워드 크롤러
+- `utils/news_crawler/` — 외부 뉴스 파이프라인 래퍼
+- `utils/news_summarizer/` — Ollama LLM 뉴스 요약
+- `utils/pipeline/` — 전체 파이프라인 오케스트레이터
 
 ### 도메인 목록
 
@@ -161,6 +174,12 @@ uv sync
 # 크롤러 포함 설치
 uv sync --extra crawler
 
+# 요약기 포함 설치
+uv sync --extra summarizer
+
+# 전체 (크롤러 + 요약기)
+uv sync --extra crawler --extra summarizer
+
 # 개발 서버 (auto-reload)
 uv run trend-korea-api
 
@@ -169,6 +188,15 @@ uv run trend-korea-worker
 
 # 키워드 크롤러
 uv run trend-korea-crawl-keywords --top-n 30 --save-db
+
+# 뉴스 크롤링 (외부 파이프라인)
+uv run trend-korea-crawl-news --keyword "키워드" --limit 3
+
+# 뉴스 요약
+uv run trend-korea-summarize-news --input news.json --model gemma3:4b
+
+# 전체 파이프라인 (키워드→크롤링→요약)
+uv run trend-korea-full-cycle --repeat 1 --max-keywords 3
 ```
 
 필수 환경변수: `DATABASE_URL` (예: `postgresql://postgres:postgres@localhost:5432/trend_korea`)
@@ -203,6 +231,10 @@ uv run alembic revision --autogenerate -m "변경 설명"
 ```bash
 uv run trend-korea-api              # 개발 서버
 uv run trend-korea-worker           # 스케줄러 워커
+uv run trend-korea-crawl-keywords   # 키워드 크롤러
+uv run trend-korea-crawl-news       # 뉴스 크롤링
+uv run trend-korea-summarize-news   # 뉴스 요약
+uv run trend-korea-full-cycle       # 전체 파이프라인
 uv run alembic upgrade head         # DB 마이그레이션 적용
 uv run alembic revision --autogenerate -m "msg"  # 마이그레이션 생성
 uv run ruff check src/              # 린트 검사

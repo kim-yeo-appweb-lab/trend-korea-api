@@ -6,7 +6,7 @@ import logging
 import sys
 from pathlib import Path
 
-from src.keyword_crawler.crawler import run_crawl, save_to_db
+from src.utils.keyword_crawler.crawler import run_crawl, save_to_db
 
 
 def main() -> None:

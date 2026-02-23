@@ -5,7 +5,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env", ".env.example"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     app_name: str = "Trend Korea API"
     app_env: str = "local"
@@ -24,6 +28,11 @@ class Settings(BaseSettings):
     auto_create_tables: bool = True
 
     cors_origins: str = "*"
+
+    # Pipeline
+    ollama_base_url: str = "http://localhost:11434/v1"
+    ollama_default_model: str = "gemma3:4b"
+    news_pipeline_dir: str = ""
 
     @property
     def cors_origins_list(self) -> list[str]:

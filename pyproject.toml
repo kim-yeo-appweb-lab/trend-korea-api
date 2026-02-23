@@ -34,11 +34,18 @@ crawler = [
   "lxml>=5.3.0,<6.0.0",
   "kiwipiepy>=0.20.0,<1.0.0",
 ]
+summarizer = [
+  "openai>=1.0.0,<2.0.0",
+  "python-dotenv>=1.0.0,<2.0.0",
+]
 
 [project.scripts]
 trend-korea-api = "src.main:run"
 trend-korea-worker = "src.worker_main:run"
-trend-korea-crawl-keywords = "src.keyword_crawler.cli:main"
+trend-korea-crawl-keywords = "src.utils.keyword_crawler.cli:main"
+trend-korea-crawl-news = "src.utils.news_crawler.cli:main"
+trend-korea-summarize-news = "src.utils.news_summarizer.cli:main"
+trend-korea-full-cycle = "src.utils.pipeline.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -11,13 +11,13 @@ from sqlalchemy.orm import Session
 
 from src.db.news_channel import NewsChannel
 from src.db.session import SessionLocal
-from src.keyword_crawler.headline_extractor import (
+from src.utils.keyword_crawler.headline_extractor import (
     extract_headlines,
     extract_headlines_from_rss,
     get_rss_url,
 )
-from src.keyword_crawler.http_client import AsyncHttpClient
-from src.keyword_crawler.keyword_analyzer import KeywordResult, extract_keywords
+from src.utils.keyword_crawler.http_client import AsyncHttpClient
+from src.utils.keyword_crawler.keyword_analyzer import KeywordResult, extract_keywords
 
 logger = logging.getLogger(__name__)
 
