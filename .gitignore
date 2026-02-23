@@ -53,3 +53,12 @@ logs/
 
 # Serena
 .serena/
+
+# Pipeline outputs (크롤링/요약 결과)
+cycle_outputs/
+crawled_news_*.json
+news_crawl_*.json
+news_summaries_*.json
+cycle_test_*.json
+src/utils/pipeline_test_results.json
+folder-architecture.md
