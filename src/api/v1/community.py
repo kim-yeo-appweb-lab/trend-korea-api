@@ -53,7 +53,14 @@ def list_posts(
     summary="게시글 작성",
     description="새 게시글을 작성합니다. 태그는 최대 3개까지 지정 가능합니다. `Authorization: Bearer <token>` 필요.",
     status_code=201,
-    responses={**RESPONSE_400, **RESPONSE_401},
+    responses={
+        **RESPONSE_400,
+        **RESPONSE_401,
+        404: {
+            "description": "존재하지 않는 태그 (`E_RESOURCE_006`)",
+            "model": ErrorResponse,
+        },
+    },
 )
 def create_post(
     payload: CreatePostRequest, request: Request, db: DbSession, user_id: CurrentMemberUserId
@@ -96,6 +103,10 @@ def get_post(post_id: str, request: Request, db: DbSession):
         **RESPONSE_400,
         **RESPONSE_401,
         **RESPONSE_403_OWNER,
+        404: {
+            "description": "게시글 미존재(`E_RESOURCE_003`) 또는 존재하지 않는 태그(`E_RESOURCE_006`)",
+            "model": ErrorResponse,
+        },
     },
 )
 def update_post(
