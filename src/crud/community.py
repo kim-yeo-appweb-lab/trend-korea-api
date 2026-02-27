@@ -29,12 +29,13 @@ class CommunityService:
 
     @staticmethod
     def _comment_to_item(comment) -> dict:
+        author = comment.author
         return {
             "id": comment.id,
             "postId": comment.post_id,
             "parentId": comment.parent_id,
             "authorId": comment.author_id,
-            "authorNickname": None,
+            "authorNickname": author.nickname if author else None,
             "content": comment.content,
             "likeCount": comment.like_count,
             "createdAt": CommunityService._to_iso(comment.created_at),
@@ -232,15 +233,17 @@ class CommunityService:
 
     @staticmethod
     def _post_to_item(post) -> dict:
+        author = post.author
+        is_anonymous = post.is_anonymous
         return {
             "id": post.id,
             "authorId": post.author_id,
-            "authorNickname": None,
-            "authorImage": None,
+            "authorNickname": None if is_anonymous else (author.nickname if author else None),
+            "authorImage": None if is_anonymous else (author.profile_image if author else None),
             "title": post.title,
             "content": post.content,
             "tags": [],
-            "isAnonymous": post.is_anonymous,
+            "isAnonymous": is_anonymous,
             "likeCount": post.like_count,
             "dislikeCount": post.dislike_count,
             "commentCount": post.comment_count,

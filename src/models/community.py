@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     Boolean,
@@ -11,9 +14,12 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base
+
+if TYPE_CHECKING:
+    from src.models.users import User
 
 post_tags = Table(
     "post_tags",
@@ -41,6 +47,8 @@ class Post(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
+    author: Mapped["User"] = relationship("User", lazy="joined")
+
 
 class Comment(Base):
     __tablename__ = "comments"
@@ -61,6 +69,8 @@ class Comment(Base):
         DateTime(timezone=True), nullable=False, index=True
     )
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    author: Mapped["User"] = relationship("User", lazy="joined")
 
 
 class CommentLike(Base):
