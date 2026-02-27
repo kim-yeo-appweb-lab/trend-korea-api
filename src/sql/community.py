@@ -6,11 +6,16 @@ from sqlalchemy.orm import Session
 
 from src.db.enums import VoteType
 from src.models.community import Comment, CommentLike, Post, PostVote, post_tags
+from src.models.tags import Tag
 
 
 class CommunityRepository:
     def __init__(self, db: Session) -> None:
         self.db = db
+
+    def get_existing_tag_ids(self, tag_ids: list[str]) -> set[str]:
+        stmt = select(Tag.id).where(Tag.id.in_(tag_ids))
+        return set(self.db.execute(stmt).scalars().all())
 
     def _apply_sort(self, stmt, *, tab: str, sort: str):
         hot_score = (Post.like_count - Post.dislike_count) * 2 + Post.comment_count

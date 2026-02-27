@@ -59,11 +59,6 @@ def create_post(
     payload: CreatePostRequest, request: Request, db: DbSession, user_id: CurrentMemberUserId
 ):
     service = CommunityService(CommunityRepository(db))
-    if len(payload.tagIds) > 3:
-        raise AppError(
-            code="E_VALID_002", message="tagIds는 최대 3개까지 허용됩니다.", status_code=400
-        )
-
     created = service.create_post(
         user_id=user_id,
         title=payload.title,
@@ -112,11 +107,6 @@ def update_post(
 ):
     service = CommunityService(CommunityRepository(db))
     is_admin = getattr(request.state, "user_role", None) == "admin"
-    if payload.tagIds is not None and len(payload.tagIds) > 3:
-        raise AppError(
-            code="E_VALID_002", message="tagIds는 최대 3개까지 허용됩니다.", status_code=400
-        )
-
     updated = service.update_post(
         post_id=post_id,
         user_id=user_id,
