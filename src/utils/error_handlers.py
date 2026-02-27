@@ -2,6 +2,7 @@ import logging
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from sqlalchemy.exc import IntegrityError
 
 from src.core.exceptions import AppError
 from src.core.response import error_response
@@ -49,6 +50,16 @@ def register_exception_handlers(app: FastAPI) -> None:
             details={"errors": invalid_fields},
             request=request,
             status_code=400,
+        )
+
+    @app.exception_handler(IntegrityError)
+    async def _handle_integrity_error(request: Request, exc: IntegrityError):
+        logger.warning("DB 무결성 제약 위반: %s", exc.orig)
+        return error_response(
+            code="E_VALID_003",
+            message="요청 데이터가 무결성 제약 조건을 위반합니다.",
+            request=request,
+            status_code=409,
         )
 
     @app.exception_handler(Exception)

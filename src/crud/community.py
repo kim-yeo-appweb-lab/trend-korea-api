@@ -8,6 +8,19 @@ class CommunityService:
     def __init__(self, repository: CommunityRepository) -> None:
         self.repository = repository
 
+    def _validate_tag_ids(self, tag_ids: list[str]) -> None:
+        if not tag_ids:
+            return
+        existing = self.repository.get_existing_tag_ids(tag_ids)
+        missing = set(tag_ids) - existing
+        if missing:
+            raise AppError(
+                code="E_RESOURCE_006",
+                message="존재하지 않는 태그입니다.",
+                status_code=404,
+                details={"invalid_tag_ids": sorted(missing)},
+            )
+
     @staticmethod
     def _to_iso(dt) -> str | None:
         if dt is None:
@@ -59,6 +72,7 @@ class CommunityService:
         is_anonymous: bool,
         tag_ids: list[str],
     ) -> dict:
+        self._validate_tag_ids(tag_ids)
         post = self.repository.create_post(
             author_id=user_id,
             title=title,
@@ -87,6 +101,8 @@ class CommunityService:
             raise AppError(
                 code="E_PERM_001", message="작성자 또는 관리자만 가능합니다.", status_code=403
             )
+        if tag_ids is not None:
+            self._validate_tag_ids(tag_ids)
         updated = self.repository.update_post(
             post=post, title=title, content=content, tag_ids=tag_ids
         )
