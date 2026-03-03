@@ -5,11 +5,13 @@ from src.core.logging import configure_logging
 from src.db import Base
 from src.db.session import engine
 from src.scheduler.jobs import (
+    cleanup_keyword_states,
     cleanup_refresh_tokens,
     recalculate_community_hot_score,
     recalculate_search_rankings,
     reconcile_issue_status,
     run_job,
+    run_news_collect_cycle,
 )
 
 settings = get_settings()
@@ -53,6 +55,26 @@ def build_scheduler() -> BlockingScheduler:
         max_instances=1,
         coalesce=True,
         id="cleanup_refresh_tokens",
+        replace_existing=True,
+    )
+
+    # ── 뉴스 수집 파이프라인 ──
+    scheduler.add_job(
+        lambda: run_job("news_collect", run_news_collect_cycle),
+        trigger="interval",
+        minutes=settings.schedule_news_collect_minutes,
+        max_instances=1,
+        coalesce=True,
+        id="news_collect",
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        lambda: run_job("keyword_state_cleanup", cleanup_keyword_states),
+        trigger="interval",
+        minutes=settings.schedule_keyword_cleanup_minutes,
+        max_instances=1,
+        coalesce=True,
+        id="keyword_state_cleanup",
         replace_existing=True,
     )
 
