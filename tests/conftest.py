@@ -18,11 +18,14 @@ from starlette.testclient import TestClient
 from src.core.security import create_access_token, hash_password
 from src.db import Base
 from src.db.enums import (
+    FeedType,
     Importance,
     IssueStatus,
+    KeywordLinkStatus,
     SourceEntityType,
     TagType,
     TriggerType,
+    UpdateType,
     UserRole,
     VerificationStatus,
 )
@@ -343,5 +346,141 @@ def create_comment(db_session: Session):
         db_session.add(comment)
         db_session.flush()
         return comment
+
+    return _factory
+
+
+# ── 뉴스 분류 시스템 팩토리 fixture ──
+
+
+@pytest.fixture()
+def create_raw_article(db_session: Session):
+    """RawArticle 팩토리."""
+    from src.db.raw_article import RawArticle
+
+    def _factory(
+        title: str = "테스트 기사",
+        canonical_url: str | None = None,
+        content_text: str | None = None,
+        source_name: str = "테스트일보",
+        title_hash: str | None = None,
+        semantic_hash: str | None = None,
+        normalized_keywords: list | None = None,
+    ) -> RawArticle:
+        import hashlib
+
+        now = datetime.now(timezone.utc)
+        article_id = str(uuid4())
+        if canonical_url is None:
+            canonical_url = f"https://example.com/news/{article_id}"
+        if title_hash is None:
+            title_hash = hashlib.sha256(title.lower().encode()).hexdigest()
+        if semantic_hash is None:
+            content_prefix = (content_text or "")[:200].lower()
+            semantic_hash = hashlib.sha256(
+                f"{title.lower()}|{content_prefix}".encode()
+            ).hexdigest()
+        article = RawArticle(
+            id=article_id,
+            canonical_url=canonical_url,
+            original_url=canonical_url,
+            title=title,
+            content_text=content_text,
+            source_name=source_name,
+            title_hash=title_hash,
+            semantic_hash=semantic_hash,
+            entity_json=None,
+            normalized_keywords=normalized_keywords,
+            published_at=now,
+            fetched_at=now,
+            created_at=now,
+        )
+        db_session.add(article)
+        db_session.flush()
+        return article
+
+    return _factory
+
+
+@pytest.fixture()
+def create_event_update(db_session: Session):
+    """EventUpdate 팩토리."""
+    from src.db.event_update import EventUpdate
+
+    def _factory(
+        article_id: str,
+        issue_id: str | None = None,
+        update_type: UpdateType = UpdateType.NEW,
+        update_score: float = 0.5,
+        major_reasons: list | None = None,
+        diff_summary: str | None = None,
+    ) -> EventUpdate:
+        now = datetime.now(timezone.utc)
+        eu = EventUpdate(
+            id=str(uuid4()),
+            issue_id=issue_id,
+            article_id=article_id,
+            update_type=update_type,
+            update_score=update_score,
+            major_reasons=major_reasons,
+            diff_summary=diff_summary,
+            created_at=now,
+        )
+        db_session.add(eu)
+        db_session.flush()
+        return eu
+
+    return _factory
+
+
+@pytest.fixture()
+def create_live_feed_item(db_session: Session):
+    """LiveFeedItem 팩토리."""
+    from src.db.live_feed_item import LiveFeedItem
+
+    def _factory(
+        update_id: str,
+        issue_id: str | None = None,
+        feed_type: FeedType = FeedType.ALL,
+        rank_score: float = 1.0,
+    ) -> LiveFeedItem:
+        now = datetime.now(timezone.utc)
+        item = LiveFeedItem(
+            id=str(uuid4()),
+            issue_id=issue_id,
+            update_id=update_id,
+            feed_type=feed_type,
+            rank_score=rank_score,
+            created_at=now,
+        )
+        db_session.add(item)
+        db_session.flush()
+        return item
+
+    return _factory
+
+
+@pytest.fixture()
+def create_issue_keyword_state(db_session: Session):
+    """IssueKeywordState 팩토리."""
+    from src.db.issue_keyword_state import IssueKeywordState
+
+    def _factory(
+        issue_id: str,
+        keyword: str = "테스트키워드",
+        status: KeywordLinkStatus = KeywordLinkStatus.ACTIVE,
+    ) -> IssueKeywordState:
+        now = datetime.now(timezone.utc)
+        state = IssueKeywordState(
+            id=str(uuid4()),
+            issue_id=issue_id,
+            normalized_keyword=keyword,
+            status=status,
+            last_seen_at=now,
+            created_at=now,
+        )
+        db_session.add(state)
+        db_session.flush()
+        return state
 
     return _factory
