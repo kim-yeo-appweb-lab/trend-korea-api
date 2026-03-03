@@ -61,6 +61,15 @@ class ChannelCrawlResult:
 
 
 @dataclass(slots=True)
+class IntersectionKeyword:
+    word: str
+    channel_count: int
+    total_count: int
+    channel_codes: list[str]
+    rank: int
+
+
+@dataclass(slots=True)
 class CrawlOutput:
     crawled_at: str
     total_channels: int
@@ -68,6 +77,8 @@ class CrawlOutput:
     failed_channels: int
     channels: list[ChannelCrawlResult]
     aggregated_keywords: list[KeywordResult]
+    intersection_keywords: list[IntersectionKeyword]
+    min_channels: int = 3
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -79,6 +90,50 @@ class CrawlOutput:
 def load_active_channels(db: Session) -> list[NewsChannel]:
     stmt = select(NewsChannel).where(NewsChannel.is_active.is_(True)).order_by(NewsChannel.code)
     return list(db.scalars(stmt).all())
+
+
+# ── 교집합 계산 ─────────────────────────────────────────────
+
+
+def _compute_intersections(
+    channels: list[ChannelCrawlResult],
+    min_channels: int = 3,
+) -> list[IntersectionKeyword]:
+    """채널 간 교집합 키워드를 계산한다.
+
+    min_channels개 이상 채널에서 등장한 키워드를 추출하고,
+    채널 수 내림차순 → 빈도 합산 내림차순으로 정렬한다.
+    """
+    word_channels: dict[str, set[str]] = {}
+    word_counts: dict[str, int] = {}
+
+    for ch in channels:
+        if ch.fetch_status != "success":
+            continue
+        for kw in ch.keywords:
+            word_channels.setdefault(kw.word, set()).add(ch.channel_code)
+            word_counts[kw.word] = word_counts.get(kw.word, 0) + kw.count
+
+    # min_channels 이상 채널에서 등장한 키워드만 필터링
+    intersected = [
+        (word, codes, word_counts[word])
+        for word, codes in word_channels.items()
+        if len(codes) >= min_channels
+    ]
+
+    # 채널 수 내림차순 → 빈도 합산 내림차순
+    intersected.sort(key=lambda x: (-len(x[1]), -x[2]))
+
+    return [
+        IntersectionKeyword(
+            word=word,
+            channel_count=len(codes),
+            total_count=total,
+            channel_codes=sorted(codes),
+            rank=i + 1,
+        )
+        for i, (word, codes, total) in enumerate(intersected)
+    ]
 
 
 # ── 비동기 크롤링 ───────────────────────────────────────────
@@ -147,6 +202,7 @@ async def _crawl_async(
     top_n_per_channel: int,
     top_n_aggregated: int,
     timeout: float,
+    min_channels: int = 3,
 ) -> CrawlOutput:
     client = AsyncHttpClient(timeout=timeout)
     results = await asyncio.gather(*[_fetch_one(client, ch, top_n_per_channel) for ch in channels])
@@ -156,14 +212,19 @@ async def _crawl_async(
         all_headlines.extend(r.headlines)
     aggregated = extract_keywords(all_headlines, top_n=top_n_aggregated)
 
+    channel_results = list(results)
+    intersections = _compute_intersections(channel_results, min_channels)
+
     ok = sum(1 for r in results if r.fetch_status == "success")
     return CrawlOutput(
         crawled_at=datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
         total_channels=len(channels),
         successful_channels=ok,
         failed_channels=len(channels) - ok,
-        channels=list(results),
+        channels=channel_results,
         aggregated_keywords=aggregated,
+        intersection_keywords=intersections,
+        min_channels=min_channels,
     )
 
 
@@ -175,6 +236,7 @@ def run_crawl(
     top_n_aggregated: int = 30,
     timeout: float = 15.0,
     category_filter: str | None = None,
+    min_channels: int = 3,
 ) -> CrawlOutput:
     with SessionLocal() as db:
         channels = load_active_channels(db)
@@ -191,19 +253,26 @@ def run_crawl(
             failed_channels=0,
             channels=[],
             aggregated_keywords=[],
+            intersection_keywords=[],
+            min_channels=min_channels,
         )
 
     logger.info("Crawling %d channels...", len(channels))
-    return asyncio.run(_crawl_async(channels, top_n_per_channel, top_n_aggregated, timeout))
+    return asyncio.run(
+        _crawl_async(channels, top_n_per_channel, top_n_aggregated, timeout, min_channels)
+    )
 
 
 # ── DB 저장 ──────────────────────────────────────────────────
 
 
 def save_to_db(output: CrawlOutput) -> int:
-    """크롤링 결과를 crawled_keywords 테이블에 저장한다. 삽입된 행 수를 반환."""
+    """크롤링 결과를 crawled_keywords + keyword_intersections 테이블에 저장한다. 삽입된 행 수를 반환."""
+    import json as _json
     import uuid
+
     from src.db.crawled_keyword import CrawledKeyword
+    from src.db.keyword_intersection import KeywordIntersection
 
     now = datetime.now(timezone.utc)
     raw = output.crawled_at.rstrip("Z")
@@ -247,9 +316,32 @@ def save_to_db(output: CrawlOutput) -> int:
             )
         )
 
+    # 교집합 키워드
+    intersection_rows: list[KeywordIntersection] = []
+    for kw in output.intersection_keywords:
+        intersection_rows.append(
+            KeywordIntersection(
+                id=str(uuid.uuid4()),
+                keyword=kw.word,
+                channel_count=kw.channel_count,
+                total_count=kw.total_count,
+                channel_codes=_json.dumps(kw.channel_codes, ensure_ascii=False),
+                rank=kw.rank,
+                min_channels=output.min_channels,
+                crawled_at=crawled_at,
+                created_at=now,
+            )
+        )
+
     with SessionLocal() as db:
         db.add_all(rows)
+        db.add_all(intersection_rows)
         db.commit()
 
-    logger.info("Saved %d keyword rows to DB", len(rows))
-    return len(rows)
+    total = len(rows) + len(intersection_rows)
+    logger.info(
+        "Saved %d keyword rows + %d intersection rows to DB",
+        len(rows),
+        len(intersection_rows),
+    )
+    return total

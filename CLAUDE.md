@@ -4,12 +4,14 @@
 
 대한민국 사회 이슈·사건을 추적·분석하는 FastAPI 백엔드 API.
 
-진입점 6개:
+진입점 8개:
 - `trend-korea-api` → `src/main.py:run`
 - `trend-korea-worker` → `src/worker_main.py:run`
 - `trend-korea-crawl-keywords` → `src/utils/keyword_crawler/cli.py:main`
 - `trend-korea-crawl-news` → `src/utils/news_crawler/cli.py:main`
+- `trend-korea-crawl-naver-news` → `src/utils/naver_news_crawler/cli.py:main`
 - `trend-korea-summarize-news` → `src/utils/news_summarizer/cli.py:main`
+- `trend-korea-crawl-products` → `src/utils/product_crawler/cli.py:main`
 - `trend-korea-full-cycle` → `src/utils/pipeline/cli.py:main`
 
 ## 기술 스택
@@ -46,6 +48,8 @@ src/
 │   ├── keyword_crawler/         # 뉴스 키워드 크롤러
 │   ├── news_crawler/            # 외부 뉴스 파이프라인 래퍼
 │   ├── news_summarizer/         # Ollama LLM 뉴스 요약
+│   ├── naver_news_crawler/       # 네이버 뉴스 검색 API 수집
+│   ├── product_crawler/         # 한국소비자원 생필품 가격 수집
 │   └── pipeline/                # 전체 파이프라인 오케스트레이터
 └── scheduler/         # 스케줄러 잡 정의
 ```
@@ -75,6 +79,8 @@ src/
 - `utils/keyword_crawler/` — 뉴스 키워드 크롤러
 - `utils/news_crawler/` — 외부 뉴스 파이프라인 래퍼
 - `utils/news_summarizer/` — Ollama LLM 뉴스 요약
+- `utils/naver_news_crawler/` — 네이버 뉴스 검색 API 수집
+- `utils/product_crawler/` — 한국소비자원 생필품 가격 수집
 - `utils/pipeline/` — 전체 파이프라인 오케스트레이터
 
 ### 도메인 목록
@@ -195,6 +201,12 @@ uv run trend-korea-crawl-news --keyword "키워드" --limit 3
 # 뉴스 요약
 uv run trend-korea-summarize-news --input news.json --model gemma3:4b
 
+# 네이버 뉴스 검색 (키워드별)
+uv run trend-korea-crawl-naver-news "반도체" "AI" --display 10 --save-db
+
+# 생필품 가격 수집 (한국소비자원 API)
+uv run trend-korea-crawl-products --max-pages 2 --save-db
+
 # 전체 파이프라인 (키워드→크롤링→요약)
 uv run trend-korea-full-cycle --repeat 1 --max-keywords 3
 ```
@@ -235,6 +247,8 @@ uv run trend-korea-crawl-keywords   # 키워드 크롤러
 uv run trend-korea-crawl-news       # 뉴스 크롤링
 uv run trend-korea-summarize-news   # 뉴스 요약
 uv run trend-korea-full-cycle       # 전체 파이프라인
+uv run trend-korea-crawl-naver-news # 네이버 뉴스 수집
+uv run trend-korea-crawl-products   # 생필품 가격 수집
 uv run alembic upgrade head         # DB 마이그레이션 적용
 uv run alembic revision --autogenerate -m "msg"  # 마이그레이션 생성
 uv run ruff check src/              # 린트 검사

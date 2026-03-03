@@ -46,6 +46,8 @@ trend-korea-crawl-keywords = "src.utils.keyword_crawler.cli:main"
 trend-korea-crawl-news = "src.utils.news_crawler.cli:main"
 trend-korea-summarize-news = "src.utils.news_summarizer.cli:main"
 trend-korea-full-cycle = "src.utils.pipeline.cli:main"
+trend-korea-crawl-products = "src.utils.product_crawler.cli:main"
+trend-korea-crawl-naver-news = "src.utils.naver_news_crawler.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

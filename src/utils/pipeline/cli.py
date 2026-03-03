@@ -23,24 +23,44 @@ from src.utils.pipeline.orchestrator import (
 def main() -> None:
     parser = argparse.ArgumentParser(description="전체 파이프라인 반복 실행")
     parser.add_argument(
-        "--repeat", type=int, default=DEFAULT_REPEAT,
+        "--repeat",
+        type=int,
+        default=DEFAULT_REPEAT,
         help=f"반복 횟수 (기본: {DEFAULT_REPEAT})",
     )
     parser.add_argument(
-        "--top-n", type=int, default=DEFAULT_TOP_N,
+        "--top-n",
+        type=int,
+        default=DEFAULT_TOP_N,
         help=f"키워드 추출 수 (기본: {DEFAULT_TOP_N})",
     )
     parser.add_argument(
-        "--max-keywords", type=int, default=DEFAULT_MAX_KEYWORDS,
+        "--max-keywords",
+        type=int,
+        default=DEFAULT_MAX_KEYWORDS,
         help=f"뉴스 크롤링에 사용할 키워드 수 (기본: {DEFAULT_MAX_KEYWORDS})",
     )
     parser.add_argument(
-        "--limit", type=int, default=DEFAULT_LIMIT,
+        "--limit",
+        type=int,
+        default=DEFAULT_LIMIT,
         help=f"키워드/채널당 기사 수 (기본: {DEFAULT_LIMIT})",
     )
     parser.add_argument(
-        "--model", default=None,
+        "--model",
+        default=None,
         help="Ollama 모델명 (기본: settings 값)",
+    )
+    parser.add_argument(
+        "--keyword-strategy",
+        choices=["intersection", "aggregated"],
+        default="intersection",
+        help="키워드 선별 전략: intersection=교집합 우선, aggregated=빈도순 (기본: intersection)",
+    )
+    parser.add_argument(
+        "--no-naver",
+        action="store_true",
+        help="네이버 뉴스 검색 비활성화",
     )
     args = parser.parse_args()
 
@@ -50,6 +70,8 @@ def main() -> None:
         max_keywords=args.max_keywords,
         limit=args.limit,
         model=args.model,
+        use_naver=not args.no_naver,
+        keyword_strategy=args.keyword_strategy,
     )
 
 

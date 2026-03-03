@@ -26,6 +26,12 @@ def main() -> None:
         default=None,
         help="채널 카테고리 필터",
     )
+    parser.add_argument(
+        "--min-channels",
+        type=int,
+        default=3,
+        help="교집합 기준 최소 채널 수 (default: 3)",
+    )
     parser.add_argument("--out", default=None, help="출력 파일 경로 (default: stdout)")
     parser.add_argument("--pretty", action="store_true", help="JSON 들여쓰기")
     parser.add_argument("--save-db", action="store_true", help="결과를 DB에 저장")
@@ -41,7 +47,18 @@ def main() -> None:
         top_n_aggregated=args.top_n,
         timeout=args.timeout,
         category_filter=args.category,
+        min_channels=args.min_channels,
     )
+
+    # 교집합 키워드 출력
+    if result.intersection_keywords:
+        top3 = [kw.word for kw in result.intersection_keywords[:3]]
+        print(
+            f"[교집합] {len(result.intersection_keywords)}개 "
+            f"({args.min_channels}+ 채널), 상위: {top3}"
+        )
+    else:
+        print(f"[교집합] {args.min_channels}+ 채널 교집합 키워드 없음")
 
     # DB 저장
     if args.save_db:

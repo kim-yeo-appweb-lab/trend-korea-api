@@ -34,6 +34,17 @@ class Settings(BaseSettings):
     ollama_default_model: str = "gemma3:4b"
     news_pipeline_dir: str = ""
 
+    # Naver Search API
+    naver_api_client: str = ""
+    naver_api_client_secret: str = ""
+
+    # OpenAPI (data.go.kr 생필품 가격)
+    openapi_product_price_encoding_key: str = ""
+    openapi_product_price_decoding_key: str = ""
+    openapi_product_price_endpoint: str = (
+        "http://openapi.price.go.kr/openApiImpl/ProductPriceInfoService"
+    )
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()] or ["*"]
