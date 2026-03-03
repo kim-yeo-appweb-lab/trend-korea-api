@@ -59,3 +59,22 @@ class NewsChannelCategory(str, Enum):
     BROADCAST = "broadcast"
     NEWSPAPER = "newspaper"
     ONLINE = "online"
+
+
+class UpdateType(str, Enum):
+    NEW = "NEW"
+    MINOR_UPDATE = "MINOR_UPDATE"
+    MAJOR_UPDATE = "MAJOR_UPDATE"
+    DUP = "DUP"
+
+
+class KeywordLinkStatus(str, Enum):
+    ACTIVE = "active"
+    COOLDOWN = "cooldown"
+    CLOSED = "closed"
+
+
+class FeedType(str, Enum):
+    BREAKING = "breaking"
+    MAJOR = "major"
+    ALL = "all"

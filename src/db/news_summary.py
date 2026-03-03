@@ -13,10 +13,10 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    JSON,
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base
@@ -61,11 +61,11 @@ class NewsKeywordSummary(Base):
     )
     keyword: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
-    key_points: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # ["point1", ...]
+    key_points: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # ["point1", ...]
     sentiment: Mapped[str] = mapped_column(String(20), nullable=False, default="neutral")
     category: Mapped[str] = mapped_column(String(30), nullable=False, default="society")
     article_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    articles: Mapped[dict | None] = mapped_column(JSONB, nullable=True)  # [{title, url, ...}]
+    articles: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # [{title, url, ...}]
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     batch: Mapped["NewsSummaryBatch"] = relationship(back_populates="summaries")
