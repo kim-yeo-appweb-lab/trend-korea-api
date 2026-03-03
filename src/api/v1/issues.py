@@ -6,8 +6,10 @@ from src.utils.dependencies import CurrentAdminUserId, CurrentMemberUserId, DbSe
 from src.schemas.shared import ErrorResponse, RESPONSE_400, RESPONSE_401, RESPONSE_403_ADMIN
 from src.schemas.issues import CreateIssueRequest, CreateTriggerRequest, UpdateIssueRequest
 from src.crud.issues import IssueService
+from src.crud.feed import FeedService
 from src.core.exceptions import AppError
 from src.core.response import success_response
+from src.sql.feed import FeedRepository
 from src.sql.issues import IssueRepository
 
 router = APIRouter(prefix="/issues", tags=["issues"])
@@ -281,4 +283,42 @@ def create_trigger(
     db.commit()
     return success_response(
         request=request, data=created, status_code=201, message="트리거 생성 성공"
+    )
+
+
+@router.get(
+    "/{issue_id}/timeline",
+    summary="이슈 타임라인 조회",
+    description="이슈에 연결된 뉴스 업데이트 타임라인을 조회합니다. 자동 분류된 기사 업데이트를 시간순으로 표시합니다.",
+    responses={
+        404: {"description": "이슈를 찾을 수 없음 (`E_RESOURCE_002`)", "model": ErrorResponse},
+    },
+)
+def list_issue_timeline(
+    issue_id: str,
+    request: Request,
+    db: DbSession,
+    cursor: str | None = Query(default=None, description="다음 페이지 커서 토큰"),
+    limit: int = Query(default=20, ge=1, le=100, description="한 번에 조회할 항목 수"),
+):
+    issue_service = IssueService(IssueRepository(db))
+    if issue_service.get_issue(issue_id) is None:
+        raise AppError(code="E_RESOURCE_002", message="이슈를 찾을 수 없습니다.", status_code=404)
+
+    feed_service = FeedService(FeedRepository(db))
+    items, next_cursor = feed_service.list_issue_timeline(
+        issue_id=issue_id,
+        cursor=cursor,
+        size=limit,
+    )
+    return success_response(
+        request=request,
+        data={
+            "items": items,
+            "cursor": {
+                "next": next_cursor,
+                "hasMore": next_cursor is not None,
+            },
+        },
+        message="조회 성공",
     )

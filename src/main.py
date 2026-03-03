@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.v1.auth import router as auth_router
 from src.api.v1.community import router as community_router
+from src.api.v1.feed import router as feed_router
 from src.core.config import get_settings
 from src.core.logging import configure_logging
 from src.core.response import success_response
@@ -101,6 +102,7 @@ app = FastAPI(
         {"name": "tags", "description": "태그 · 태그 목록 조회, 관리자 CRUD"},
         {"name": "sources", "description": "출처 · 출처 목록 조회, 관리자 등록/삭제"},
         {"name": "triggers", "description": "트리거 · 트리거 수정/삭제 (관리자 전용)"},
+        {"name": "feed", "description": "피드 · 실시간 뉴스 업데이트 피드"},
     ],
     servers=[{"url": "/", "description": "현재 서버"}],
     license_info={"name": "Private"},
@@ -149,6 +151,7 @@ app.include_router(home_router, prefix=settings.api_v1_prefix)
 app.include_router(tags_router, prefix=settings.api_v1_prefix)
 app.include_router(sources_router, prefix=settings.api_v1_prefix)
 app.include_router(triggers_router, prefix=settings.api_v1_prefix)
+app.include_router(feed_router, prefix=settings.api_v1_prefix)
 
 
 def run() -> None:
