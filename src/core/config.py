@@ -45,6 +45,26 @@ class Settings(BaseSettings):
         "http://openapi.price.go.kr/openApiImpl/ProductPriceInfoService"
     )
 
+    # 기사 분류기 임계값
+    classifier_score_new: float = 0.45
+    classifier_score_major: float = 0.70
+    classifier_candidate_window_hours: int = 72
+
+    # 분류기 점수 가중치
+    classifier_weight_keyword: float = 0.15
+    classifier_weight_entity: float = 0.20
+    classifier_weight_semantic: float = 0.35
+    classifier_weight_time: float = 0.20
+    classifier_weight_source: float = 0.10
+
+    # 피드 설정
+    feed_breaking_score_threshold: float = 0.85
+    feed_major_boost: float = 1.5
+
+    # 스케줄러 — 뉴스 수집 파이프라인
+    schedule_news_collect_minutes: int = 15
+    schedule_keyword_cleanup_minutes: int = 60
+
     @property
     def cors_origins_list(self) -> list[str]:
         return [item.strip() for item in self.cors_origins.split(",") if item.strip()] or ["*"]

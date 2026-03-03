@@ -62,6 +62,11 @@ def main() -> None:
         action="store_true",
         help="네이버 뉴스 검색 비활성화",
     )
+    parser.add_argument(
+        "--no-classify",
+        action="store_true",
+        help="기사 분류/중복 제거 비활성화",
+    )
     args = parser.parse_args()
 
     run_full_pipeline(
@@ -72,6 +77,7 @@ def main() -> None:
         model=args.model,
         use_naver=not args.no_naver,
         keyword_strategy=args.keyword_strategy,
+        enable_classification=not args.no_classify,
     )
 
 

@@ -1,4 +1,4 @@
-"""키워드 수집 → 뉴스 크롤링 → 뉴스 요약 전체 파이프라인 오케스트레이터.
+"""키워드 수집 → 뉴스 크롤링 → 기사 분류 → 뉴스 요약 전체 파이프라인 오케스트레이터.
 
 keyword_crawler와 news_summarizer는 직접 함수 호출,
 news_crawler만 subprocess (외부 프로젝트).
@@ -48,6 +48,52 @@ def _select_keywords(
     return [kw.word for kw in crawl_output.aggregated_keywords[:max_keywords]]
 
 
+def _run_classification(
+    articles: list[dict],
+) -> tuple[list[dict], dict[str, int]]:
+    """기사 분류/중복 제거를 실행하고 DUP 제외 기사와 통계를 반환한다."""
+    from src.db.session import SessionLocal
+    from src.utils.pipeline.feed_builder import persist_results
+    from src.utils.pipeline.update_classifier import classify_batch
+
+    db = SessionLocal()
+    try:
+        results = classify_batch(articles, db)
+        stats = persist_results(results, db)
+        db.commit()
+
+        # DUP 제외 기사 article_id 목록
+        from src.db.enums import UpdateType
+
+        non_dup_ids = {
+            r.article_id for r in results if r.update_type != UpdateType.DUP
+        }
+
+        # articles에서 DUP 기사 필터링 (원본 dict 반환)
+        # article_id와 articles를 매핑하기 위해 URL 기반 필터링
+        from src.utils.pipeline.update_classifier import normalize_url
+        from sqlalchemy import select
+        from src.db.raw_article import RawArticle
+
+        non_dup_urls: set[str] = set()
+        if non_dup_ids:
+            stmt = select(RawArticle.canonical_url).where(
+                RawArticle.id.in_(non_dup_ids)
+            )
+            rows = db.execute(stmt).scalars().all()
+            non_dup_urls = set(rows)
+
+        filtered = []
+        for art in articles:
+            url = art.get("url") or art.get("original_link") or art.get("link", "")
+            if normalize_url(url) in non_dup_urls:
+                filtered.append(art)
+
+        return filtered, stats
+    finally:
+        db.close()
+
+
 def run_cycle(
     cycle_num: int,
     cycle_dir: Path,
@@ -58,10 +104,11 @@ def run_cycle(
     *,
     use_naver: bool = True,
     keyword_strategy: str = "intersection",
+    enable_classification: bool = True,
 ) -> dict:
     """한 사이클 실행. 결과 메타데이터 반환."""
     start = time.time()
-    total_steps = 4 if use_naver else 3
+    total_steps = 3 + int(use_naver) + int(enable_classification) * 2
     print(f"\n{'=' * 60}")
     print(f"  사이클 {cycle_num} 시작 ({datetime.now(timezone.utc).strftime('%H:%M:%S')} UTC)")
     print(f"{'=' * 60}")
@@ -69,7 +116,8 @@ def run_cycle(
     cycle_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. 키워드 수집 (직접 함수 호출)
-    print(f"  [1/{total_steps}] 키워드 수집 중...")
+    step = 1
+    print(f"  [{step}/{total_steps}] 키워드 수집 중...")
     try:
         crawl_output = run_crawl(top_n_aggregated=top_n)
     except Exception as exc:
@@ -122,7 +170,7 @@ def run_cycle(
     print(f"  [키워드] {strategy_label} {len(selected)}개 선택: {selected}")
 
     # 2. 뉴스 크롤링 (subprocess — 외부 프로젝트)
-    step = 2
+    step += 1
     print(f"  [{step}/{total_steps}] 뉴스 크롤링 중...")
     crawl_path = cycle_dir / "crawl.json"
     report_path = cycle_dir / "crawl_report.json"
@@ -170,7 +218,44 @@ def run_cycle(
             "elapsed": time.time() - start,
         }
 
-    # 4. 뉴스 요약 (직접 함수 호출)
+    # 4. 기사 분류/중복 제거 (신규)
+    classify_stats: dict[str, int] = {}
+    if enable_classification:
+        step += 1
+        print(f"  [{step}/{total_steps}] 기사 분류/중복 제거 중...")
+        try:
+            articles, classify_stats = _run_classification(articles)
+            dup_count = classify_stats.get("dup", 0)
+            print(
+                f"  [분류] 완료: NEW={classify_stats.get('new', 0)}, "
+                f"MINOR={classify_stats.get('minor', 0)}, "
+                f"MAJOR={classify_stats.get('major', 0)}, "
+                f"DUP={dup_count}"
+            )
+            if not articles:
+                print("  [분류] 모든 기사가 중복 — 요약 건너뜀")
+                return {
+                    "cycle": cycle_num,
+                    "status": "ok",
+                    "elapsed": round(time.time() - start, 1),
+                    "keywords_extracted": agg_count,
+                    "keywords_used": len(selected),
+                    "intersection_count": ix_count,
+                    "articles_collected": article_count,
+                    "naver_articles": naver_count,
+                    "classification": classify_stats,
+                    "summaries": 0,
+                    "total_tags": 0,
+                }
+        except Exception as exc:
+            print(f"  [분류] 실패 (무시, 전체 기사로 진행): {exc}")
+
+        # 필터링된 기사로 crawl.json 갱신
+        if articles:
+            with crawl_path.open("w", encoding="utf-8") as f:
+                json.dump(articles, f, ensure_ascii=False, indent=2)
+
+    # 5. 뉴스 요약 (직접 함수 호출) — DUP 제외 기사만 요약
     step += 1
     print(f"  [{step}/{total_steps}] 뉴스 요약 중...")
     summary_path = cycle_dir / "summary.json"
@@ -203,6 +288,8 @@ def run_cycle(
         "tokens": summary.get("total_tokens", {}),
         "model": summary.get("model", ""),
     }
+    if classify_stats:
+        result["classification"] = classify_stats
 
     print(
         f"  [완료] {elapsed:.1f}초 | 기사 {article_count}건 | 요약 {len(kw_summaries)}건 | 태그 {total_tags}개"
@@ -220,6 +307,7 @@ def run_full_pipeline(
     *,
     use_naver: bool = True,
     keyword_strategy: str = "intersection",
+    enable_classification: bool = True,
 ) -> dict:
     """전체 파이프라인을 반복 실행한다."""
     project_root = Path(__file__).resolve().parent.parent.parent.parent
@@ -233,9 +321,11 @@ def run_full_pipeline(
     print(f"전체 파이프라인 반복 실행 ({repeat}회)")
     print(f"  출력 디렉토리: {run_dir}")
     naver_label = "ON" if use_naver else "OFF"
+    classify_label = "ON" if enable_classification else "OFF"
     print(
         f"  설정: top_n={top_n}, max_keywords={max_keywords}, limit={limit}, "
-        f"model={model}, naver={naver_label}, strategy={keyword_strategy}"
+        f"model={model}, naver={naver_label}, strategy={keyword_strategy}, "
+        f"classify={classify_label}"
     )
 
     all_results: list[dict] = []
@@ -252,6 +342,7 @@ def run_full_pipeline(
             model,
             use_naver=use_naver,
             keyword_strategy=keyword_strategy,
+            enable_classification=enable_classification,
         )
         all_results.append(result)
 
@@ -268,6 +359,7 @@ def run_full_pipeline(
             "limit": limit,
             "model": model,
             "keyword_strategy": keyword_strategy,
+            "enable_classification": enable_classification,
         },
         "cycles": all_results,
         "summary": {
