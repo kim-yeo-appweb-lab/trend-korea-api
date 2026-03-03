@@ -13,5 +13,5 @@ class Tag(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False)
     type: Mapped[TagType] = mapped_column(Enum(TagType), nullable=False)
-    slug: Mapped[str] = mapped_column(String(80), nullable=False, unique=True)
+    slug: Mapped[str] = mapped_column(String(80), nullable=False, unique=True, index=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
