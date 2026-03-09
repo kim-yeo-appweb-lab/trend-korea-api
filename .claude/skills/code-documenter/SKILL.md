@@ -44,13 +44,13 @@ class RegisterRequest(BaseModel):
 
 ### 문서화 계층별 기준
 
-| 계층 | 문서화 수준 | 방식 |
-|------|------------|------|
-| FastAPI Endpoint | 상세 | `summary`, `description`, `responses` |
-| Pydantic Schema | 상세 | `Field(description=, examples=)` |
-| Service/Repository | 최소 | 메서드명과 타입 힌트로 충분하면 생략 |
-| ORM Model | 최소 | 필드명과 제약조건으로 충분하면 생략 |
-| Utility 함수 | 필요 시 | 동작이 자명하지 않을 때만 추가 |
+| 계층               | 문서화 수준 | 방식                                  |
+| ------------------ | ----------- | ------------------------------------- |
+| FastAPI Endpoint   | 상세        | `summary`, `description`, `responses` |
+| Pydantic Schema    | 상세        | `Field(description=, examples=)`      |
+| Service/Repository | 최소        | 메서드명과 타입 힌트로 충분하면 생략  |
+| ORM Model          | 최소        | 필드명과 제약조건으로 충분하면 생략   |
+| Utility 함수       | 필요 시     | 동작이 자명하지 않을 때만 추가        |
 
 ### 불필요한 주석 금지
 
@@ -78,11 +78,11 @@ def generate_token(self, user_id: str) -> str:
 
 ## Reference
 
-| 주제 | 파일 | 참조 시점 |
-|------|------|----------|
-| FastAPI 문서화 | `references/api-docs-fastapi.md` | Endpoint, Router, Pydantic 문서화 |
-| Python Docstring | `references/python-docstrings.md` | 서비스/유틸리티 docstring 작성 |
-| 커버리지 리포트 | `references/coverage-reports.md` | 문서화 완료 후 리포트 생성 |
+| 주제             | 파일                              | 참조 시점                         |
+| ---------------- | --------------------------------- | --------------------------------- |
+| FastAPI 문서화   | `references/api-docs-fastapi.md`  | Endpoint, Router, Pydantic 문서화 |
+| Python Docstring | `references/python-docstrings.md` | 서비스/유틸리티 docstring 작성    |
+| 커버리지 리포트  | `references/coverage-reports.md`  | 문서화 완료 후 리포트 생성        |
 
 ## 제약사항
 
