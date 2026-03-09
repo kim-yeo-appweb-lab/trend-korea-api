@@ -50,6 +50,7 @@ logs/
 
 # Claude Code
 .claude/settings.local.json
+.omc/
 
 # Serena
 .serena/
