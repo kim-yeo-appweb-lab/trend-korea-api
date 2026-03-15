@@ -8,10 +8,16 @@ from src.schemas.users import (
     SocialDisconnectRequest,
     UpdateMeRequest,
 )
+from src.schemas.notification import CreateAlertRuleRequest
+from src.schemas.subscription import CreateSubscriptionRequest
 from src.core.exceptions import AppError
 from src.core.response import success_response
 from src.core.security import hash_password, verify_password
+from src.crud.notification import NotificationService
+from src.crud.subscription import SubscriptionService
 from src.sql.auth import AuthRepository
+from src.sql.notification import NotificationRepository
+from src.sql.subscription import SubscriptionRepository
 from src.sql.users import UserRepository
 
 me_router = APIRouter(prefix="/users/me", tags=["users"])
@@ -208,6 +214,273 @@ def get_my_activity(
                 "itemsPerPage": limit,
                 "hasNext": False,
                 "hasPrev": page > 1,
+            },
+        },
+        message="조회 성공",
+    )
+
+
+# ── 알림 규칙 ──
+
+
+@me_router.post(
+    "/alert-rules",
+    summary="알림 규칙 생성",
+    description="키워드 또는 중요도 기반 알림 규칙을 생성합니다.",
+    responses={**RESPONSE_401},
+)
+def create_alert_rule(
+    payload: CreateAlertRuleRequest,
+    request: Request,
+    user_id: CurrentMemberUserId,
+    db: DbSession,
+):
+    service = NotificationService(NotificationRepository(db))
+    rule = service.create_alert_rule(
+        user_id=user_id,
+        keyword=payload.keyword,
+        min_importance=payload.minImportance,
+    )
+    db.commit()
+    return success_response(
+        request=request,
+        data=rule,
+        status_code=201,
+        message="알림 규칙 생성 성공",
+    )
+
+
+@me_router.get(
+    "/alert-rules",
+    summary="알림 규칙 목록",
+    description="내 알림 규칙 목록을 조회합니다.",
+    responses={**RESPONSE_401},
+)
+def list_alert_rules(
+    request: Request,
+    user_id: CurrentMemberUserId,
+    db: DbSession,
+):
+    service = NotificationService(NotificationRepository(db))
+    rules = service.list_alert_rules(user_id=user_id)
+    return success_response(request=request, data=rules, message="조회 성공")
+
+
+@me_router.delete(
+    "/alert-rules/{rule_id}",
+    summary="알림 규칙 삭제",
+    description="알림 규칙을 삭제합니다.",
+    responses={**RESPONSE_401},
+)
+def delete_alert_rule(
+    rule_id: str,
+    request: Request,
+    user_id: CurrentMemberUserId,
+    db: DbSession,
+):
+    service = NotificationService(NotificationRepository(db))
+    deleted = service.delete_alert_rule(rule_id=rule_id, user_id=user_id)
+    if not deleted:
+        raise AppError(
+            code="E_RESOURCE_008",
+            message="알림 규칙을 찾을 수 없습니다",
+            status_code=404,
+        )
+    db.commit()
+    return success_response(request=request, data=None, message="알림 규칙 삭제 성공")
+
+
+# ── 알림 ──
+
+
+@me_router.get(
+    "/notifications",
+    summary="알림 목록 조회",
+    description="내 알림 목록을 커서 기반으로 조회합니다.",
+    responses={**RESPONSE_401},
+)
+def list_notifications(
+    request: Request,
+    user_id: CurrentMemberUserId,
+    db: DbSession,
+    cursor: str | None = Query(default=None, description="다음 페이지 커서"),
+    limit: int = Query(default=20, ge=1, le=100, description="한 번에 조회할 항목 수"),
+):
+    service = NotificationService(NotificationRepository(db))
+    items, next_cursor = service.list_notifications(
+        user_id=user_id,
+        cursor=cursor,
+        size=limit,
+    )
+    return success_response(
+        request=request,
+        data={
+            "items": items,
+            "cursor": {
+                "next": next_cursor,
+                "hasMore": next_cursor is not None,
+            },
+        },
+        message="조회 성공",
+    )
+
+
+@me_router.patch(
+    "/notifications/{notification_id}/read",
+    summary="알림 읽음 처리",
+    description="특정 알림을 읽음 처리합니다.",
+    responses={**RESPONSE_401},
+)
+def mark_notification_read(
+    notification_id: str,
+    request: Request,
+    user_id: CurrentMemberUserId,
+    db: DbSession,
+):
+    service = NotificationService(NotificationRepository(db))
+    result = service.mark_read(notification_id=notification_id, user_id=user_id)
+    if result is None:
+        raise AppError(
+            code="E_RESOURCE_009",
+            message="알림을 찾을 수 없습니다",
+            status_code=404,
+        )
+    db.commit()
+    return success_response(request=request, data=result, message="읽음 처리 성공")
+
+
+@me_router.post(
+    "/notifications/read-all",
+    summary="전체 알림 읽음 처리",
+    description="읽지 않은 모든 알림을 읽음 처리합니다.",
+    responses={**RESPONSE_401},
+)
+def mark_all_notifications_read(
+    request: Request,
+    user_id: CurrentMemberUserId,
+    db: DbSession,
+):
+    service = NotificationService(NotificationRepository(db))
+    count = service.mark_all_read(user_id=user_id)
+    db.commit()
+    return success_response(
+        request=request,
+        data={"updatedCount": count},
+        message="전체 읽음 처리 성공",
+    )
+
+
+# ── 키워드 구독 ──
+
+
+@me_router.post(
+    "/subscriptions",
+    summary="키워드 구독",
+    description="키워드를 구독하여 관련 기사가 수집되면 알림을 받습니다.",
+    responses={**RESPONSE_401},
+)
+def create_subscription(
+    payload: CreateSubscriptionRequest,
+    request: Request,
+    user_id: CurrentMemberUserId,
+    db: DbSession,
+):
+    service = SubscriptionService(SubscriptionRepository(db))
+    try:
+        sub = service.create_subscription(user_id=user_id, keyword=payload.keyword)
+    except Exception:
+        raise AppError(
+            code="E_CONFLICT_003",
+            message="이미 구독 중인 키워드입니다",
+            status_code=409,
+        )
+    db.commit()
+    return success_response(
+        request=request,
+        data=sub,
+        status_code=201,
+        message="키워드 구독 성공",
+    )
+
+
+@me_router.get(
+    "/subscriptions",
+    summary="구독 목록",
+    description="내 키워드 구독 목록을 조회합니다.",
+    responses={**RESPONSE_401},
+)
+def list_subscriptions(
+    request: Request,
+    user_id: CurrentMemberUserId,
+    db: DbSession,
+):
+    service = SubscriptionService(SubscriptionRepository(db))
+    subs = service.list_subscriptions(user_id=user_id)
+    return success_response(request=request, data=subs, message="조회 성공")
+
+
+@me_router.delete(
+    "/subscriptions/{subscription_id}",
+    summary="구독 해제",
+    description="키워드 구독을 해제합니다.",
+    responses={**RESPONSE_401},
+)
+def delete_subscription(
+    subscription_id: str,
+    request: Request,
+    user_id: CurrentMemberUserId,
+    db: DbSession,
+):
+    service = SubscriptionService(SubscriptionRepository(db))
+    deleted = service.delete_subscription(
+        subscription_id=subscription_id,
+        user_id=user_id,
+    )
+    if not deleted:
+        raise AppError(
+            code="E_RESOURCE_010",
+            message="구독을 찾을 수 없습니다",
+            status_code=404,
+        )
+    db.commit()
+    return success_response(request=request, data=None, message="구독 해제 성공")
+
+
+@me_router.get(
+    "/subscriptions/{subscription_id}/matches",
+    summary="매칭 기사 목록",
+    description="구독 키워드와 매칭된 기사 목록을 조회합니다.",
+    responses={**RESPONSE_401},
+)
+def list_subscription_matches(
+    subscription_id: str,
+    request: Request,
+    user_id: CurrentMemberUserId,
+    db: DbSession,
+    cursor: str | None = Query(default=None, description="다음 페이지 커서"),
+    limit: int = Query(default=20, ge=1, le=100, description="한 번에 조회할 항목 수"),
+):
+    service = SubscriptionService(SubscriptionRepository(db))
+    result = service.list_matches(
+        subscription_id=subscription_id,
+        user_id=user_id,
+        cursor=cursor,
+        size=limit,
+    )
+    if result is None:
+        raise AppError(
+            code="E_RESOURCE_010",
+            message="구독을 찾을 수 없습니다",
+            status_code=404,
+        )
+    items, next_cursor = result
+    return success_response(
+        request=request,
+        data={
+            "items": items,
+            "cursor": {
+                "next": next_cursor,
+                "hasMore": next_cursor is not None,
             },
         },
         message="조회 성공",

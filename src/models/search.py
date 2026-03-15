@@ -16,14 +16,3 @@ class SearchRanking(Base):
     calculated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True
     )
-
-
-class SearchHistory(Base):
-    __tablename__ = "search_histories"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    user_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    keyword: Mapped[str] = mapped_column(String(100), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, index=True
-    )

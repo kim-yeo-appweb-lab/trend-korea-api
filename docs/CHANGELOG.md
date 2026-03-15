@@ -69,9 +69,7 @@
 
 ---
 
-## 현재 진행 중 (미커밋 변경 사항)
-
-아래 항목은 작업 브랜치 또는 로컬에서 진행 중이며 아직 커밋되지 않은 상태.
+## Phase 6 — 수집 파이프라인 고도화 + 알림/구독 시스템
 
 ### 1. 모델 대규모 재구성 — `db/` → `models/` 통합
 
@@ -178,7 +176,7 @@ Before (Phase 4까지):
                                           ↓
                     update_classifier → feed_builder
 
-After (현재 진행 중):
+After (Phase 6):
   keyword_crawler + headline_extractor
           ↓
   Elasticsearch nori 매칭

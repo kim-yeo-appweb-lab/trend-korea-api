@@ -78,3 +78,11 @@ class FeedType(str, Enum):
     BREAKING = "breaking"
     MAJOR = "major"
     ALL = "all"
+
+
+class NotificationType(str, Enum):
+    MAJOR_UPDATE = "major_update"
+    TRIGGER_UPDATE = "trigger_update"
+    COMMENT_REPLY = "comment_reply"
+    KEYWORD_MATCH = "keyword_match"
+    SYSTEM = "system"

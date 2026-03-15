@@ -356,7 +356,7 @@ def create_comment(db_session: Session):
 @pytest.fixture()
 def create_raw_article(db_session: Session):
     """RawArticle 팩토리."""
-    from src.db.raw_article import RawArticle
+    from src.models.pipeline import RawArticle
 
     def _factory(
         title: str = "테스트 기사",
@@ -405,7 +405,7 @@ def create_raw_article(db_session: Session):
 @pytest.fixture()
 def create_event_update(db_session: Session):
     """EventUpdate 팩토리."""
-    from src.db.event_update import EventUpdate
+    from src.models.feed import EventUpdate
 
     def _factory(
         article_id: str,
@@ -436,7 +436,7 @@ def create_event_update(db_session: Session):
 @pytest.fixture()
 def create_live_feed_item(db_session: Session):
     """LiveFeedItem 팩토리."""
-    from src.db.live_feed_item import LiveFeedItem
+    from src.models.feed import LiveFeedItem
 
     def _factory(
         update_id: str,
@@ -463,7 +463,7 @@ def create_live_feed_item(db_session: Session):
 @pytest.fixture()
 def create_issue_keyword_state(db_session: Session):
     """IssueKeywordState 팩토리."""
-    from src.db.issue_keyword_state import IssueKeywordState
+    from src.models.issues import IssueKeywordState
 
     def _factory(
         issue_id: str,

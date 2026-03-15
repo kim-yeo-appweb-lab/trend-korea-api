@@ -56,8 +56,10 @@ class NewsKeywordSummary(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     batch_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("news_summary_batches.id", ondelete="CASCADE"),
-        nullable=False, index=True,
+        String(36),
+        ForeignKey("news_summary_batches.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     keyword: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
@@ -85,7 +87,8 @@ class NewsSummaryTag(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     summary_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("news_keyword_summaries.id", ondelete="CASCADE"),
+        String(36),
+        ForeignKey("news_keyword_summaries.id", ondelete="CASCADE"),
         nullable=False,
     )
     tag: Mapped[str] = mapped_column(String(50), nullable=False)

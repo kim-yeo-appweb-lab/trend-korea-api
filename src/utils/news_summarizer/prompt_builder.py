@@ -21,12 +21,35 @@ def load_articles(input_path: str) -> list[dict]:
 
 
 def group_by_keyword(articles: list[dict]) -> dict[str, list[dict]]:
-    """기사를 키워드별로 그룹핑한다."""
+    """matched_keywords 리스트 기반으로 개별 키워드별 그룹핑한다.
+
+    하나의 기사가 여러 키워드에 매칭될 수 있으므로, matched_keywords의
+    각 키워드별로 기사를 분배한다. URL 기준 중복 제거 + confidence 내림차순.
+    """
     groups: dict[str, list[dict]] = defaultdict(list)
     for article in articles:
-        groups[article["keyword"]].append(article)
+        matched = article.get("matched_keywords", [])
+        if matched:
+            for kw in matched:
+                groups[kw].append(article)
+        else:
+            # 폴백: keyword 필드(콤마 구분 문자열 또는 단일 키워드)
+            keyword = article.get("keyword", "unknown")
+            groups[keyword].append(article)
+
+    # URL 기준 중복 제거 + confidence 내림차순
     for kw in groups:
-        groups[kw].sort(key=lambda a: -a.get("confidence", 0))
+        seen: set[str] = set()
+        unique: list[dict] = []
+        for a in sorted(groups[kw], key=lambda x: -x.get("confidence", 0)):
+            url = a.get("url", "")
+            if url and url not in seen:
+                seen.add(url)
+                unique.append(a)
+            elif not url:
+                unique.append(a)
+        groups[kw] = unique
+
     return dict(groups)
 
 
@@ -36,9 +59,9 @@ def build_combined_prompt(groups: dict[str, list[dict]]) -> str:
 
     for keyword, articles in groups.items():
         selected = articles[:MAX_ARTICLES_PER_KEYWORD]
-        parts.append(f'{"=" * 50}')
+        parts.append(f"{'=' * 50}")
         parts.append(f'[키워드: "{keyword}"] 관련 기사 {len(selected)}건')
-        parts.append(f'{"=" * 50}')
+        parts.append(f"{'=' * 50}")
 
         for i, article in enumerate(selected, 1):
             title = article.get("title", "(제목 없음)")

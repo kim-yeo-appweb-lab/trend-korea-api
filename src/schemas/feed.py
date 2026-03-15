@@ -28,13 +28,23 @@ class LiveFeedItemResponse(BaseModel):
     createdAt: str = Field(description="생성 일시")
 
 
+class TopStoryItemResponse(BaseModel):
+    """Top Stories 항목."""
+
+    rank: int = Field(description="랭킹 순위")
+    issueId: str = Field(description="이슈 ID")
+    issueTitle: str = Field(description="이슈 제목")
+    score: float = Field(description="종합 점수")
+    recentUpdates: int = Field(description="최근 24시간 업데이트 수")
+    trackedCount: int = Field(description="추적자 수")
+    lastUpdateAt: str | None = Field(default=None, description="마지막 업데이트 시각")
+
+
 class TimelineItemResponse(BaseModel):
     """이슈 타임라인 항목."""
 
     updateType: str = Field(description="업데이트 유형")
     summary: str | None = Field(default=None, description="기사 제목/요약")
     diffSummary: str | None = Field(default=None, description="변경 요약")
-    sources: list[FeedArticleResponse] = Field(
-        default_factory=list, description="관련 기사 목록"
-    )
+    sources: list[FeedArticleResponse] = Field(default_factory=list, description="관련 기사 목록")
     occurredAt: str = Field(description="발생 일시")

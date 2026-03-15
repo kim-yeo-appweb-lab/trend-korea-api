@@ -105,7 +105,8 @@ def run_summarize(input_path: str, output_path: str, model: str | None = None) -
 
     # LLM 응답의 키워드 요약 목록
     llm_items = [
-        item for item in parsed.get("keywords", [])
+        item
+        for item in parsed.get("keywords", [])
         if isinstance(item, dict) and item.get("summary")
     ]
     print(f"[INFO] LLM 요약 {len(llm_items)}건 파싱됨")
@@ -129,10 +130,7 @@ def run_summarize(input_path: str, output_path: str, model: str | None = None) -
     # 정확 매칭 실패 시 부분 매칭 (입력 키워드가 LLM 키워드에 포함되거나 반대)
     if len(matched) < len(input_keywords):
         unmatched_inputs = [k for k in input_keywords if k not in matched]
-        unmatched_llm = [
-            (k, v) for k, v in llm_summaries.items()
-            if v not in matched.values()
-        ]
+        unmatched_llm = [(k, v) for k, v in llm_summaries.items() if v not in matched.values()]
         for inp_kw in unmatched_inputs:
             for llm_kw, llm_data in unmatched_llm:
                 if inp_kw in llm_kw or llm_kw in inp_kw:
@@ -158,25 +156,27 @@ def run_summarize(input_path: str, output_path: str, model: str | None = None) -
     keyword_results: list[dict] = []
     for keyword, kw_articles in groups.items():
         llm_data = matched.get(keyword, {})
-        keyword_results.append({
-            "keyword": keyword,
-            "article_count": len(kw_articles),
-            "summary": llm_data.get("summary", ""),
-            "key_points": llm_data.get("key_points", []),
-            "sentiment": llm_data.get("sentiment", "neutral"),
-            "category": llm_data.get("category", "society"),
-            # entities를 tags의 fallback으로 사용 (gemma3가 tags 대신 entities를 반환하는 경우)
-            "tags": llm_data.get("tags") or llm_data.get("entities", []),
-            "articles": [
-                {
-                    "title": a.get("title", ""),
-                    "url": a.get("url", ""),
-                    "channel": a.get("channel", ""),
-                    "confidence": a.get("confidence", 0),
-                }
-                for a in kw_articles
-            ],
-        })
+        keyword_results.append(
+            {
+                "keyword": keyword,
+                "article_count": len(kw_articles),
+                "summary": llm_data.get("summary", ""),
+                "key_points": llm_data.get("key_points", []),
+                "sentiment": llm_data.get("sentiment", "neutral"),
+                "category": llm_data.get("category", "society"),
+                # entities를 tags의 fallback으로 사용 (gemma3가 tags 대신 entities를 반환하는 경우)
+                "tags": llm_data.get("tags") or llm_data.get("entities", []),
+                "articles": [
+                    {
+                        "title": a.get("title", ""),
+                        "url": a.get("url", ""),
+                        "channel": a.get("channel", ""),
+                        "confidence": a.get("confidence", 0),
+                    }
+                    for a in kw_articles
+                ],
+            }
+        )
 
     output = {
         "summarized_at": datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
@@ -209,7 +209,7 @@ def save_to_db(result: dict, db_url: str | None = None) -> str:
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
 
-    from src.db.news_summary import NewsSummaryBatch, NewsKeywordSummary, NewsSummaryTag
+    from src.models.news_summary import NewsSummaryBatch, NewsKeywordSummary, NewsSummaryTag
 
     if db_url:
         engine = create_engine(db_url, pool_pre_ping=True)
@@ -262,8 +262,10 @@ def save_to_db(result: dict, db_url: str | None = None) -> str:
         session.add(batch)
         session.commit()
         print(f"[DB  ] 저장 완료: batch_id={batch_id}")
-        print(f"  요약 {len(batch.summaries)}건, 태그 총 "
-              f"{sum(len(s.tags) for s in batch.summaries)}개")
+        print(
+            f"  요약 {len(batch.summaries)}건, 태그 총 "
+            f"{sum(len(s.tags) for s in batch.summaries)}개"
+        )
         return batch_id
     except Exception as exc:
         session.rollback()

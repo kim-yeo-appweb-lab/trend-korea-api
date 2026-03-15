@@ -9,9 +9,12 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from src.db.news_channel import NewsChannel
+from src.models.sources import NewsChannel
 from src.db.session import SessionLocal
 from src.utils.keyword_crawler.headline_extractor import (
+    HeadlineItem,
+    extract_headline_items,
+    extract_headline_items_from_rss,
     extract_headlines,
     extract_headlines_from_rss,
     get_rss_url,
@@ -53,6 +56,7 @@ class ChannelCrawlResult:
     headlines: list[str]
     keywords: list[KeywordResult]
     fetch_status: str  # success | failed | blocked | timeout
+    headline_items: list[HeadlineItem]
     error_message: str | None = None
     fetch_duration_ms: int = 0
 
@@ -78,6 +82,7 @@ class CrawlOutput:
     channels: list[ChannelCrawlResult]
     aggregated_keywords: list[KeywordResult]
     intersection_keywords: list[IntersectionKeyword]
+    all_headline_items: list[HeadlineItem]
     min_channels: int = 3
 
     def to_dict(self) -> dict:
@@ -151,6 +156,9 @@ async def _fetch_one(
         if rss_url:
             xml = await client.get_text(rss_url)
             headlines = extract_headlines_from_rss(xml)
+            headline_items = extract_headline_items_from_rss(
+                xml, channel_name=channel.name, channel_code=channel.code,
+            )
         else:
             html = await client.get_text(channel.url)
             if _looks_blocked(html):
@@ -163,10 +171,14 @@ async def _fetch_one(
                     headlines=[],
                     keywords=[],
                     fetch_status="blocked",
+                    headline_items=[],
                     error_message="Blocked by anti-bot",
                     fetch_duration_ms=duration,
                 )
             headlines = extract_headlines(html, channel.code)
+            headline_items = extract_headline_items(
+                html, channel.code, channel_name=channel.name, base_url=channel.url,
+            )
 
         duration = int((time.monotonic() - start) * 1000)
         keywords = extract_keywords(headlines, top_n=top_n)
@@ -179,6 +191,7 @@ async def _fetch_one(
             headlines=headlines,
             keywords=keywords,
             fetch_status="success",
+            headline_items=headline_items,
             fetch_duration_ms=duration,
         )
     except Exception as exc:
@@ -192,6 +205,7 @@ async def _fetch_one(
             headlines=[],
             keywords=[],
             fetch_status="failed",
+            headline_items=[],
             error_message=str(exc)[:300],
             fetch_duration_ms=duration,
         )
@@ -215,6 +229,15 @@ async def _crawl_async(
     channel_results = list(results)
     intersections = _compute_intersections(channel_results, min_channels)
 
+    # 전 채널 headline_items를 URL 기준 중복 제거 후 집계
+    seen_urls: set[str] = set()
+    all_headline_items: list[HeadlineItem] = []
+    for r in results:
+        for item in r.headline_items:
+            if item.url not in seen_urls:
+                seen_urls.add(item.url)
+                all_headline_items.append(item)
+
     ok = sum(1 for r in results if r.fetch_status == "success")
     return CrawlOutput(
         crawled_at=datetime.now(timezone.utc).isoformat(timespec="seconds") + "Z",
@@ -224,6 +247,7 @@ async def _crawl_async(
         channels=channel_results,
         aggregated_keywords=aggregated,
         intersection_keywords=intersections,
+        all_headline_items=all_headline_items,
         min_channels=min_channels,
     )
 
@@ -254,6 +278,7 @@ def run_crawl(
             channels=[],
             aggregated_keywords=[],
             intersection_keywords=[],
+            all_headline_items=[],
             min_channels=min_channels,
         )
 
@@ -271,8 +296,7 @@ def save_to_db(output: CrawlOutput) -> int:
     import json as _json
     import uuid
 
-    from src.db.crawled_keyword import CrawledKeyword
-    from src.db.keyword_intersection import KeywordIntersection
+    from src.models.pipeline import CrawledKeyword, KeywordIntersection
 
     now = datetime.now(timezone.utc)
     raw = output.crawled_at.rstrip("Z")

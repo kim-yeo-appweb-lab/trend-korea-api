@@ -1,0 +1,26 @@
+# trend-korea-backend 스케줄러 — supercronic용 crontab
+# 각 잡은 trend-korea-cron CLI를 통해 독립 프로세스로 실행된다.
+
+# 트렌드 키워드 수집 (10분 간격)
+*/10 * * * * trend-korea-cron keyword_collect
+
+# 뉴스 수집 파이프라인 (10분 간격)
+*/10 * * * * trend-korea-cron news_collect
+
+# 키워드 상태 정리 (10분 간격)
+*/10 * * * * trend-korea-cron keyword_state_cleanup
+
+# 이슈 상태 조정 (10분 간격)
+*/10 * * * * trend-korea-cron issue_status_reconcile
+
+# 검색 랭킹 재계산 (10분 간격)
+*/10 * * * * trend-korea-cron search_rankings
+
+# 인기 게시글 점수 업데이트 (10분 간격)
+*/10 * * * * trend-korea-cron community_hot_score
+
+# 만료 토큰 정리 (10분 간격)
+*/10 * * * * trend-korea-cron cleanup_refresh_tokens
+
+# 이슈 랭킹 스냅샷 (10분 간격)
+*/10 * * * * trend-korea-cron issue_rankings

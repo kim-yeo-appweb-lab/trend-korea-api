@@ -16,7 +16,9 @@ def main() -> None:
         "--keyword", action="append", required=True, help="크롤링 키워드 (여러 개 가능)"
     )
     parser.add_argument("--limit", type=int, default=3, help="키워드/채널당 기사 수 (기본: 3)")
-    parser.add_argument("--out", default=None, help="출력 JSON 경로 (기본: news_crawl_results.json)")
+    parser.add_argument(
+        "--out", default=None, help="출력 JSON 경로 (기본: news_crawl_results.json)"
+    )
     parser.add_argument("--report-out", default=None, help="크롤 리포트 JSON 경로")
     parser.add_argument("--pipeline-dir", default=None, help="외부 파이프라인 디렉토리 경로")
     args = parser.parse_args()

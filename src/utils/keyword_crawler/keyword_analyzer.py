@@ -59,9 +59,7 @@ MIN_KEYWORD_LEN = 2
 # 명사구 추출을 위한 POS 태그 설정
 NOUN_TAGS = frozenset({"NNG", "NNP"})  # 일반명사, 고유명사
 # 명사 사이에서 연결 역할을 하는 태그 (조사, 접미사)
-BRIDGE_TAGS = frozenset(
-    {"JKS", "JKO", "JKB", "JKG", "JKC", "JX", "JC", "XSN"}
-)
+BRIDGE_TAGS = frozenset({"JKS", "JKO", "JKB", "JKG", "JKC", "JX", "JC", "XSN"})
 MAX_PHRASE_NOUNS = 4  # 하나의 구에 포함될 최대 명사 수
 
 
@@ -133,9 +131,7 @@ def _phrases_from_group(group: list[tuple[str, str]]) -> list[str]:
     return phrases
 
 
-def _filter_subphrases(
-    ranked: list[tuple[str, int]], top_n: int
-) -> list[tuple[str, int]]:
+def _filter_subphrases(ranked: list[tuple[str, int]], top_n: int) -> list[tuple[str, int]]:
     """상위 랭크 구에 포함되는 하위 구를 제거한다.
 
     "트럼프 관세 부과"(count=5)가 이미 있으면

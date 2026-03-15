@@ -1,6 +1,8 @@
+"""스케줄러 잡 실행 기록 모델."""
+
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, Text
+from sqlalchemy import DateTime, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.db.base import Base
@@ -15,3 +17,4 @@ class JobRun(Base):
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    metrics: Mapped[dict | None] = mapped_column(JSON, nullable=True)

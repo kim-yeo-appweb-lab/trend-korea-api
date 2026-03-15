@@ -1,3 +1,7 @@
+# ⚠️ DEPRECATED: Docker 환경에서는 supercronic + trend-korea-cron CLI를 사용합니다.
+# 이 파일은 로컬 개발 전용으로 유지됩니다.
+# 프로덕션 crontab 설정은 프로젝트 루트의 `crontab` 파일을 참조하세요.
+
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from src.core.config import get_settings
@@ -7,6 +11,7 @@ from src.db.session import engine
 from src.scheduler.jobs import (
     cleanup_keyword_states,
     cleanup_refresh_tokens,
+    collect_keywords,
     recalculate_community_hot_score,
     recalculate_search_rankings,
     reconcile_issue_status,
@@ -23,7 +28,7 @@ def build_scheduler() -> BlockingScheduler:
     scheduler.add_job(
         lambda: run_job("issue_status_reconcile", reconcile_issue_status),
         trigger="cron",
-        minute="*/30",
+        minute="*/10",
         max_instances=1,
         coalesce=True,
         id="issue_status_reconcile",
@@ -32,7 +37,7 @@ def build_scheduler() -> BlockingScheduler:
     scheduler.add_job(
         lambda: run_job("search_rankings", recalculate_search_rankings),
         trigger="cron",
-        minute="0",
+        minute="*/10",
         max_instances=1,
         coalesce=True,
         id="search_rankings",
@@ -50,11 +55,21 @@ def build_scheduler() -> BlockingScheduler:
     scheduler.add_job(
         lambda: run_job("cleanup_refresh_tokens", cleanup_refresh_tokens),
         trigger="cron",
-        hour="3",
-        minute="0",
+        minute="*/10",
         max_instances=1,
         coalesce=True,
         id="cleanup_refresh_tokens",
+        replace_existing=True,
+    )
+
+    # ── 키워드 수집 ──
+    scheduler.add_job(
+        lambda: run_job("keyword_collect", collect_keywords),
+        trigger="cron",
+        minute="*/10",
+        max_instances=1,
+        coalesce=True,
+        id="keyword_collect",
         replace_existing=True,
     )
 

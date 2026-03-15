@@ -1,9 +1,20 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Table, Text
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Table,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.db.enums import IssueStatus
+from src.db.enums import IssueStatus, KeywordLinkStatus
 from src.db.base import Base
 
 issue_tags = Table(
@@ -42,3 +53,61 @@ class Issue(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class IssueKeywordState(Base):
+    """이슈-키워드 연결 상태. 키워드 기반 이슈 자동 매칭에 사용."""
+
+    __tablename__ = "issue_keyword_states"
+    __table_args__ = (
+        Index(
+            "ix_iks_keyword_status_seen",
+            "normalized_keyword",
+            "status",
+            "last_seen_at",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    issue_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("issues.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    normalized_keyword: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[KeywordLinkStatus] = mapped_column(
+        Enum(KeywordLinkStatus), nullable=False, default=KeywordLinkStatus.ACTIVE
+    )
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class IssueKeywordAlias(Base):
+    __tablename__ = "issue_keyword_aliases"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    alias_keyword: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)
+    canonical_keyword: Mapped[str] = mapped_column(String(200), nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (Index("ix_ika_canonical", "canonical_keyword"),)
+
+
+class IssueRankSnapshot(Base):
+    __tablename__ = "issue_rank_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    issue_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("issues.id", ondelete="CASCADE"), nullable=False
+    )
+    rank: Mapped[int] = mapped_column(Integer, nullable=False)
+    score: Mapped[float] = mapped_column(Float, nullable=False)
+    recent_updates: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    tracked_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    saved_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (Index("ix_irs_calculated_rank", "calculated_at", "rank"),)

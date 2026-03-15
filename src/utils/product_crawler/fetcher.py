@@ -328,7 +328,7 @@ def save_to_db(result: FetchResult) -> tuple[int, int]:
     """수집 결과를 DB에 저장한다. (product_saved, price_saved) 반환."""
     from sqlalchemy import select
 
-    from src.db.product import ProductInfo, ProductPrice
+    from src.models.pipeline import ProductInfo
 
     now = datetime.now(timezone.utc)
 
@@ -365,27 +365,6 @@ def save_to_db(result: FetchResult) -> tuple[int, int]:
             db.flush()
             logger.info("상품 %d건 신규 저장", len(new_products))
 
-        # 가격 저장
-        price_rows: list[ProductPrice] = []
-        for pr in result.prices:
-            price_rows.append(
-                ProductPrice(
-                    id=str(uuid.uuid4()),
-                    good_id=pr.good_id,
-                    price=pr.price,
-                    store_name=pr.store_name,
-                    on_sale=pr.on_sale,
-                    survey_date=pr.survey_date,
-                    raw_data=pr.raw_data,
-                    fetched_at=now,
-                    created_at=now,
-                )
-            )
-
-        if price_rows:
-            db.add_all(price_rows)
-            logger.info("가격 %d건 저장", len(price_rows))
-
         db.commit()
 
-    return len(new_products), len(price_rows)
+    return len(new_products), 0

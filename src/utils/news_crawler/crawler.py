@@ -44,10 +44,15 @@ def run_news_crawl(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     cmd = [
-        "uv", "run", "news-pipeline",
-        "--format", "json",
-        "--out", str(output_path),
-        "--limit", str(limit),
+        "uv",
+        "run",
+        "news-pipeline",
+        "--format",
+        "json",
+        "--out",
+        str(output_path),
+        "--limit",
+        str(limit),
         "--no-spa",
     ]
     if report_path:

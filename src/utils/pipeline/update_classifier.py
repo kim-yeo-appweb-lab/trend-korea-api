@@ -17,9 +17,9 @@ from sqlalchemy.orm import Session
 
 from src.core.config import get_settings
 from src.db.enums import KeywordLinkStatus, UpdateType
-from src.db.event_update import EventUpdate
-from src.db.issue_keyword_state import IssueKeywordState
-from src.db.raw_article import RawArticle
+from src.models.feed import EventUpdate
+from src.models.issues import IssueKeywordState
+from src.models.pipeline import RawArticle
 
 
 @dataclass
@@ -38,10 +38,20 @@ class ClassificationResult:
 # ── URL 정규화 ──
 
 
-_TRACKING_PARAMS = frozenset({
-    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
-    "fbclid", "gclid", "ref", "source", "from",
-})
+_TRACKING_PARAMS = frozenset(
+    {
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_term",
+        "utm_content",
+        "fbclid",
+        "gclid",
+        "ref",
+        "source",
+        "from",
+    }
+)
 
 
 def normalize_url(url: str) -> str:
@@ -94,14 +104,39 @@ def compute_semantic_hash(title: str, content: str | None) -> str:
 # ── 키워드 정규화 ──
 
 
+def _load_alias_map() -> dict[str, str]:
+    """DB에서 키워드 별칭 매핑을 로드한다 (alias → canonical)."""
+    try:
+        from src.models.issues import IssueKeywordAlias
+        from src.db.session import SessionLocal
+
+        with SessionLocal() as db:
+            from sqlalchemy import select
+
+            rows = db.execute(
+                select(
+                    IssueKeywordAlias.alias_keyword,
+                    IssueKeywordAlias.canonical_keyword,
+                )
+            ).all()
+            return {alias: canonical for alias, canonical in rows}
+    except Exception:
+        return {}
+
+
 def normalize_keywords(keywords: list[str] | None) -> list[str]:
-    """키워드 목록을 정규화: 소문자 + 공백 정리 + 중복 제거."""
+    """키워드 목록을 정규화: 소문자 + 공백 정리 + 별칭 변환 + 중복 제거."""
     if not keywords:
         return []
+
+    alias_map = _load_alias_map()
+
     seen: set[str] = set()
     result: list[str] = []
     for kw in keywords:
         normalized = _normalize_text(kw)
+        # 별칭이 존재하면 canonical 키워드로 변환
+        normalized = alias_map.get(normalized, normalized)
         if normalized and normalized not in seen:
             seen.add(normalized)
             result.append(normalized)
@@ -144,21 +179,18 @@ def normalize_article(article: dict) -> dict:
 
 def check_exact_duplicate(canonical_url: str, db: Session) -> str | None:
     """canonical_url이 이미 존재하면 기존 기사 ID 반환."""
-    stmt = select(RawArticle.id).where(
-        RawArticle.canonical_url == canonical_url
-    )
+    stmt = select(RawArticle.id).where(RawArticle.canonical_url == canonical_url)
     result = db.execute(stmt).scalar_one_or_none()
     return result
 
 
-def check_near_duplicate(
-    title_hash: str, semantic_hash: str, db: Session
-) -> str | None:
+def check_near_duplicate(title_hash: str, semantic_hash: str, db: Session) -> str | None:
     """title_hash 또는 semantic_hash로 근사 중복 검사."""
-    stmt = select(RawArticle.id).where(
-        (RawArticle.title_hash == title_hash)
-        | (RawArticle.semantic_hash == semantic_hash)
-    ).limit(1)
+    stmt = (
+        select(RawArticle.id)
+        .where((RawArticle.title_hash == title_hash) | (RawArticle.semantic_hash == semantic_hash))
+        .limit(1)
+    )
     result = db.execute(stmt).scalar_one_or_none()
     return result
 
@@ -179,10 +211,12 @@ def find_candidate_issues(
         IssueKeywordState.normalized_keyword,
     ).where(
         IssueKeywordState.normalized_keyword.in_(keywords),
-        IssueKeywordState.status.in_([
-            KeywordLinkStatus.ACTIVE,
-            KeywordLinkStatus.COOLDOWN,
-        ]),
+        IssueKeywordState.status.in_(
+            [
+                KeywordLinkStatus.ACTIVE,
+                KeywordLinkStatus.COOLDOWN,
+            ]
+        ),
         IssueKeywordState.last_seen_at >= cutoff,
     )
     rows = db.execute(stmt).all()
@@ -197,18 +231,14 @@ def find_candidate_issues(
     total_keywords = len(keywords)
     return [
         (issue_id, match_count / total_keywords)
-        for issue_id, match_count in sorted(
-            issue_matches.items(), key=lambda x: x[1], reverse=True
-        )
+        for issue_id, match_count in sorted(issue_matches.items(), key=lambda x: x[1], reverse=True)
     ]
 
 
 # ── 점수 계산 ──
 
 
-def compute_match_score(
-    article: dict, issue_id: str, keyword_ratio: float, db: Session
-) -> float:
+def compute_match_score(article: dict, issue_id: str, keyword_ratio: float, db: Session) -> float:
     """기사와 이슈 간 매칭 점수를 계산한다 (0.0 ~ 1.0)."""
     settings = get_settings()
 
@@ -356,10 +386,7 @@ def _compute_source_score(article: dict, issue_id: str, db: Session) -> float:
     if not rows:
         return 0.3
 
-    same_source = sum(
-        1 for name in rows
-        if name and name.lower().strip() == source_name
-    )
+    same_source = sum(1 for name in rows if name and name.lower().strip() == source_name)
     return min(0.3 + (same_source / len(rows)) * 0.7, 1.0)
 
 

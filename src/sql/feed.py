@@ -4,10 +4,9 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from src.db.enums import FeedType, UpdateType
-from src.db.event_update import EventUpdate
-from src.db.live_feed_item import LiveFeedItem
-from src.db.raw_article import RawArticle
-from src.models.issues import Issue
+from src.models.feed import EventUpdate, LiveFeedItem
+from src.models.issues import Issue, IssueRankSnapshot
+from src.models.pipeline import RawArticle
 
 
 class FeedRepository:
@@ -50,13 +49,15 @@ class FeedRepository:
 
         result = []
         for lfi, eu, ra, issue_id_ref, issue_title in items:
-            result.append({
-                "lfi": lfi,
-                "eu": eu,
-                "ra": ra,
-                "issue_id": issue_id_ref,
-                "issue_title": issue_title,
-            })
+            result.append(
+                {
+                    "lfi": lfi,
+                    "eu": eu,
+                    "ra": ra,
+                    "issue_id": issue_id_ref,
+                    "issue_title": issue_title,
+                }
+            )
 
         return result, next_offset
 
@@ -66,6 +67,46 @@ class FeedRepository:
         if feed_type and feed_type != "all":
             stmt = stmt.where(LiveFeedItem.feed_type == FeedType(feed_type))
         return int(self.db.execute(stmt).scalar_one())
+
+    def list_top_stories(self, *, limit: int) -> tuple[list[dict], str | None]:
+        """최신 랭킹 스냅샷에서 Top Stories를 조회한다."""
+        # 가장 최근 calculated_at 시각 조회
+        latest_at = self.db.execute(
+            select(func.max(IssueRankSnapshot.calculated_at))
+        ).scalar_one_or_none()
+
+        if latest_at is None:
+            return [], None
+
+        stmt = (
+            select(IssueRankSnapshot, Issue.title.label("issue_title"))
+            .join(Issue, IssueRankSnapshot.issue_id == Issue.id)
+            .where(IssueRankSnapshot.calculated_at == latest_at)
+            .order_by(IssueRankSnapshot.rank)
+            .limit(limit)
+        )
+        rows = self.db.execute(stmt).all()
+
+        # 각 이슈의 마지막 업데이트 시각 조회
+        result = []
+        for snapshot, issue_title in rows:
+            last_update = self.db.execute(
+                select(func.max(EventUpdate.created_at)).where(
+                    EventUpdate.issue_id == snapshot.issue_id,
+                    EventUpdate.update_type != UpdateType.DUP,
+                )
+            ).scalar_one_or_none()
+
+            result.append(
+                {
+                    "snapshot": snapshot,
+                    "issue_title": issue_title,
+                    "last_update_at": last_update,
+                }
+            )
+
+        calculated_at_iso = latest_at.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+        return result, calculated_at_iso
 
     def list_issue_updates(
         self,

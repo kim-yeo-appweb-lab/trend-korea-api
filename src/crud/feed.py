@@ -36,27 +36,50 @@ class FeedService:
             lfi = row["lfi"]
             eu = row["eu"]
             ra = row["ra"]
-            payload.append({
-                "id": lfi.id,
-                "issueId": row["issue_id"],
-                "issueTitle": row["issue_title"],
-                "updateType": eu.update_type.value,
-                "updateScore": eu.update_score,
-                "feedType": lfi.feed_type.value,
-                "rankScore": lfi.rank_score,
-                "article": {
-                    "title": ra.title,
-                    "source": ra.source_name,
-                    "publishedAt": self._to_iso(ra.published_at),
-                    "url": ra.original_url,
-                },
-                "majorReasons": eu.major_reasons or [],
-                "diffSummary": eu.diff_summary,
-                "createdAt": self._to_iso(lfi.created_at),
-            })
+            payload.append(
+                {
+                    "id": lfi.id,
+                    "issueId": row["issue_id"],
+                    "issueTitle": row["issue_title"],
+                    "updateType": eu.update_type.value,
+                    "updateScore": eu.update_score,
+                    "feedType": lfi.feed_type.value,
+                    "rankScore": lfi.rank_score,
+                    "article": {
+                        "title": ra.title,
+                        "source": ra.source_name,
+                        "publishedAt": self._to_iso(ra.published_at),
+                        "url": ra.original_url,
+                    },
+                    "majorReasons": eu.major_reasons or [],
+                    "diffSummary": eu.diff_summary,
+                    "createdAt": self._to_iso(lfi.created_at),
+                }
+            )
 
         next_cursor = encode_cursor(next_offset) if next_offset is not None else None
         return payload, next_cursor
+
+    def list_top_stories(self, *, limit: int) -> tuple[list[dict], str | None]:
+        """Top Stories 조회."""
+        rows, calculated_at = self.repository.list_top_stories(limit=limit)
+
+        payload = []
+        for row in rows:
+            snapshot = row["snapshot"]
+            payload.append(
+                {
+                    "rank": snapshot.rank,
+                    "issueId": snapshot.issue_id,
+                    "issueTitle": row["issue_title"],
+                    "score": snapshot.score,
+                    "recentUpdates": snapshot.recent_updates,
+                    "trackedCount": snapshot.tracked_count,
+                    "lastUpdateAt": self._to_iso(row["last_update_at"]),
+                }
+            )
+
+        return payload, calculated_at
 
     def list_issue_timeline(
         self,
@@ -77,20 +100,22 @@ class FeedService:
         for row in items:
             eu = row["eu"]
             ra = row["ra"]
-            payload.append({
-                "updateType": eu.update_type.value,
-                "summary": ra.title,
-                "diffSummary": eu.diff_summary,
-                "sources": [
-                    {
-                        "title": ra.title,
-                        "url": ra.original_url,
-                        "source": ra.source_name,
-                        "publishedAt": self._to_iso(ra.published_at),
-                    }
-                ],
-                "occurredAt": self._to_iso(eu.created_at),
-            })
+            payload.append(
+                {
+                    "updateType": eu.update_type.value,
+                    "summary": ra.title,
+                    "diffSummary": eu.diff_summary,
+                    "sources": [
+                        {
+                            "title": ra.title,
+                            "url": ra.original_url,
+                            "source": ra.source_name,
+                            "publishedAt": self._to_iso(ra.published_at),
+                        }
+                    ],
+                    "occurredAt": self._to_iso(eu.created_at),
+                }
+            )
 
         next_cursor = encode_cursor(next_offset) if next_offset is not None else None
         return payload, next_cursor

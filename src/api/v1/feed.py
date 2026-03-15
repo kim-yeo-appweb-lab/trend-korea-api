@@ -11,6 +11,33 @@ router = APIRouter(prefix="/feed", tags=["feed"])
 
 
 @router.get(
+    "/top",
+    summary="Top Stories 조회",
+    description="현재 가장 주목받는 이슈 랭킹을 조회합니다. 매시 정각 계산됩니다.",
+)
+def list_top_stories(
+    request: Request,
+    db: DbSession,
+    limit: int = Query(
+        default=10,
+        ge=1,
+        le=20,
+        description="조회할 항목 수",
+    ),
+):
+    service = FeedService(FeedRepository(db))
+    items, calculated_at = service.list_top_stories(limit=limit)
+    return success_response(
+        request=request,
+        data={
+            "items": items,
+            "calculatedAt": calculated_at,
+        },
+        message="조회 성공",
+    )
+
+
+@router.get(
     "/live",
     summary="실시간 피드 조회",
     description=(

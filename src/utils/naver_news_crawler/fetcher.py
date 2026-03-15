@@ -180,7 +180,7 @@ def run_fetch(
 
 def save_to_db(result: FetchResult) -> int:
     """수집 결과를 DB에 저장한다. 삽입된 행 수를 반환."""
-    from src.db.naver_news import NaverNewsArticle
+    from src.models.pipeline import NaverNewsArticle
 
     now = datetime.now(timezone.utc)
     rows: list[NaverNewsArticle] = []
@@ -224,12 +224,14 @@ def to_article_dicts(result: FetchResult, limit_per_keyword: int = 3) -> list[di
     articles: list[dict] = []
     for kw, items in per_kw.items():
         for item in items[:limit_per_keyword]:
-            articles.append({
-                "keyword": item.keyword,
-                "title": item.title,
-                "content_text": item.description,  # 네이버 API 요약문을 본문 대용
-                "channel": "naver_news",
-                "url": item.original_link or item.naver_link,
-                "confidence": 0.8,  # 네이버 검색 결과 기본 신뢰도
-            })
+            articles.append(
+                {
+                    "keyword": item.keyword,
+                    "title": item.title,
+                    "content_text": item.description,  # 네이버 API 요약문을 본문 대용
+                    "channel": "naver_news",
+                    "url": item.original_link or item.naver_link,
+                    "confidence": 0.8,  # 네이버 검색 결과 기본 신뢰도
+                }
+            )
     return articles

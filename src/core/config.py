@@ -45,6 +45,11 @@ class Settings(BaseSettings):
         "http://openapi.price.go.kr/openApiImpl/ProductPriceInfoService"
     )
 
+    # Elasticsearch
+    elasticsearch_url: str = ""
+    elasticsearch_index: str = "news_articles"
+    elasticsearch_timeout: int = 10
+
     # 기사 분류기 임계값
     classifier_score_new: float = 0.45
     classifier_score_major: float = 0.70
@@ -62,8 +67,8 @@ class Settings(BaseSettings):
     feed_major_boost: float = 1.5
 
     # 스케줄러 — 뉴스 수집 파이프라인
-    schedule_news_collect_minutes: int = 15
-    schedule_keyword_cleanup_minutes: int = 60
+    schedule_news_collect_minutes: int = 10
+    schedule_keyword_cleanup_minutes: int = 10
 
     @property
     def cors_origins_list(self) -> list[str]:

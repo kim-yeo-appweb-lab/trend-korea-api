@@ -1,8 +1,9 @@
 """뉴스 수집 파이프라인 스케줄러 잡.
 
-기획서 기준 배치 주기:
-- news_collect: 15분 간격 — 키워드 수집 → 뉴스 크롤링 → 분류/중복 제거 → 요약 → 피드 저장
-- keyword_state_cleanup: 1시간 — cooldown/closed 상태 전환
+배치 주기:
+- keyword_collect: 10분 — 트렌드 키워드 수집 → DB 저장
+- news_collect: 10분 — 키워드 수집 → 뉴스 크롤링 → 분류/중복 제거 → 요약 → 피드 저장
+- keyword_state_cleanup: 10분 — cooldown/closed 상태 전환
 """
 
 from __future__ import annotations
@@ -18,6 +19,33 @@ from sqlalchemy.orm import Session
 from src.db.enums import KeywordLinkStatus
 
 logger = logging.getLogger(__name__)
+
+
+def collect_keywords(db: Session) -> str | None:
+    """트렌드 키워드를 수집하여 crawled_keywords / keyword_intersections에 저장한다."""
+    from src.utils.keyword_crawler.crawler import run_crawl, save_to_db
+
+    try:
+        result = run_crawl(top_n_aggregated=30)
+    except Exception:
+        logger.exception("[keyword_collect] 크롤링 실패")
+        raise
+
+    if result.successful_channels == 0:
+        detail = "channels=0, 수집 실패"
+        logger.warning(f"[keyword_collect] {detail}")
+        return detail
+
+    saved = save_to_db(result)
+
+    detail = (
+        f"channels={result.successful_channels}/{result.total_channels}, "
+        f"aggregated={len(result.aggregated_keywords)}, "
+        f"intersection={len(result.intersection_keywords)}, "
+        f"saved={saved}"
+    )
+    logger.info(f"[keyword_collect] {detail}")
+    return detail
 
 
 def run_news_collect_cycle(db: Session) -> str | None:
@@ -81,7 +109,7 @@ def cleanup_keyword_states(db: Session) -> str | None:
     - last_seen_at이 48시간 경과한 ACTIVE → COOLDOWN
     - last_seen_at이 72시간 추가 경과한 COOLDOWN → CLOSED
     """
-    from src.db.issue_keyword_state import IssueKeywordState
+    from src.models.issues import IssueKeywordState
 
     now = datetime.now(timezone.utc)
     cooldown_cutoff = now - timedelta(hours=48)
