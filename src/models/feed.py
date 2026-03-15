@@ -7,10 +7,10 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, Float, ForeignKey, Index, JSON, String, Text
+from sqlalchemy import DateTime, Float, ForeignKey, Index, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.db.base import Base
+from src.db.base import Base, ValueEnum
 from src.db.enums import FeedType, UpdateType
 
 
@@ -33,7 +33,7 @@ class EventUpdate(Base):
         nullable=False,
         index=True,
     )
-    update_type: Mapped[UpdateType] = mapped_column(Enum(UpdateType), nullable=False)
+    update_type: Mapped[UpdateType] = mapped_column(ValueEnum(UpdateType), nullable=False)
     update_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     major_reasons: Mapped[list | None] = mapped_column(JSON, nullable=True)
     diff_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -67,6 +67,6 @@ class LiveFeedItem(Base):
         nullable=False,
         index=True,
     )
-    feed_type: Mapped[FeedType] = mapped_column(Enum(FeedType), nullable=False)
+    feed_type: Mapped[FeedType] = mapped_column(ValueEnum(FeedType), nullable=False)
     rank_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

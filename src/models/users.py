@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 
+from src.db.base import Base, ValueEnum
 from src.db.enums import UserRole
-from src.db.base import Base
 
 
 class User(Base):
@@ -15,7 +15,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     profile_image: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False, default=UserRole.MEMBER)
+    role: Mapped[UserRole] = mapped_column(ValueEnum(UserRole), nullable=False, default=UserRole.MEMBER)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     withdrawn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

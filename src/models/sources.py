@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, String, Text
+from sqlalchemy import Boolean, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from src.db.base import Base, ValueEnum
 from src.db.enums import SourceEntityType
-from src.db.base import Base
 
 
 class Source(Base):
@@ -12,7 +12,7 @@ class Source(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     entity_type: Mapped[SourceEntityType] = mapped_column(
-        Enum(SourceEntityType), nullable=False, index=True
+        ValueEnum(SourceEntityType), nullable=False, index=True
     )
     entity_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     url: Mapped[str] = mapped_column(String(500), nullable=False)

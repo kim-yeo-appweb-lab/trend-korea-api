@@ -5,7 +5,6 @@ from datetime import datetime
 from sqlalchemy import (
     Boolean,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Index,
@@ -14,7 +13,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
-from src.db.base import Base
+from src.db.base import Base, ValueEnum
 from src.db.enums import NotificationType
 
 
@@ -45,7 +44,7 @@ class Notification(Base):
     user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    type: Mapped[NotificationType] = mapped_column(Enum(NotificationType), nullable=False)
+    type: Mapped[NotificationType] = mapped_column(ValueEnum(NotificationType), nullable=False)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     entity_type: Mapped[str | None] = mapped_column(String(50), nullable=True)

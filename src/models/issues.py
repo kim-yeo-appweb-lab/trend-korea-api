@@ -3,7 +3,6 @@ from datetime import datetime
 from sqlalchemy import (
     Column,
     DateTime,
-    Enum,
     Float,
     ForeignKey,
     Index,
@@ -14,8 +13,8 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
+from src.db.base import Base, ValueEnum
 from src.db.enums import IssueStatus, KeywordLinkStatus
-from src.db.base import Base
 
 issue_tags = Table(
     "issue_tags",
@@ -46,7 +45,7 @@ class Issue(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     title: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[IssueStatus] = mapped_column(Enum(IssueStatus), nullable=False, index=True)
+    status: Mapped[IssueStatus] = mapped_column(ValueEnum(IssueStatus), nullable=False, index=True)
     tracker_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, index=True)
     latest_trigger_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
@@ -77,7 +76,7 @@ class IssueKeywordState(Base):
     )
     normalized_keyword: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[KeywordLinkStatus] = mapped_column(
-        Enum(KeywordLinkStatus), nullable=False, default=KeywordLinkStatus.ACTIVE
+        ValueEnum(KeywordLinkStatus), nullable=False, default=KeywordLinkStatus.ACTIVE
     )
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

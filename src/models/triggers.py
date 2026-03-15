@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from src.db.base import Base, ValueEnum
 from src.db.enums import TriggerType
-from src.db.base import Base
 
 
 class Trigger(Base):
@@ -18,6 +18,6 @@ class Trigger(Base):
         DateTime(timezone=True), nullable=False, index=True
     )
     summary: Mapped[str] = mapped_column(Text, nullable=False)
-    type: Mapped[TriggerType] = mapped_column(Enum(TriggerType), nullable=False)
+    type: Mapped[TriggerType] = mapped_column(ValueEnum(TriggerType), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

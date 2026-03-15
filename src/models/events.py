@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Integer, String, Table, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
+from src.db.base import Base, ValueEnum
 from src.db.enums import Importance, VerificationStatus
-from src.db.base import Base
 
 event_tags = Table(
     "event_tags",
@@ -31,9 +31,9 @@ class Event(Base):
     )
     title: Mapped[str] = mapped_column(String(50), nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
-    importance: Mapped[Importance] = mapped_column(Enum(Importance), nullable=False)
+    importance: Mapped[Importance] = mapped_column(ValueEnum(Importance), nullable=False)
     verification_status: Mapped[VerificationStatus] = mapped_column(
-        Enum(VerificationStatus),
+        ValueEnum(VerificationStatus),
         nullable=False,
         default=VerificationStatus.UNVERIFIED,
     )
