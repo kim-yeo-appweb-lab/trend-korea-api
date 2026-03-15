@@ -47,9 +47,9 @@ def get_me(request: Request, user_id: CurrentMemberUserId, db: DbSession):
             "nickname": user.nickname,
             "profileImage": user.profile_image,
             "role": user.role.value,
-            "socialProviders": [],
-            "trackedIssueIds": [],
-            "savedEventIds": [],
+            "socialProviders": repo.get_social_providers(user_id),
+            "trackedIssueIds": repo.get_tracked_issue_ids(user_id),
+            "savedEventIds": repo.get_saved_event_ids(user_id),
             "createdAt": _to_iso(user.created_at),
             "updatedAt": _to_iso(user.updated_at),
         },
@@ -189,8 +189,8 @@ def social_disconnect(
 
 @me_router.get(
     "/activity",
-    summary="내 활동 내역 조회 (미구현)",
-    description="게시글, 댓글, 추천 등 내 활동 내역을 페이지네이션으로 조회합니다. (미구현) `Authorization: Bearer <token>` 필요.",
+    summary="내 활동 내역 조회",
+    description="게시글, 댓글, 추천 등 내 활동 내역을 페이지네이션으로 조회합니다. `Authorization: Bearer <token>` 필요.",
     responses={**RESPONSE_401},
 )
 def get_my_activity(
@@ -201,18 +201,21 @@ def get_my_activity(
     limit: int = Query(default=10, ge=1, le=100, description="페이지당 항목 수"),
     type: str = Query(default="all", description="활동 유형 필터 (all, post, comment, like)"),
 ):
-    _ = user_id
-    _ = db
+    repo = UserRepository(db)
+    offset = (page - 1) * limit
+    items, total = repo.get_activity(user_id, activity_type=type, offset=offset, limit=limit)
+    total_pages = (total + limit - 1) // limit if total > 0 else 0
+
     return success_response(
         request=request,
         data={
-            "items": [],
+            "items": items,
             "pagination": {
                 "currentPage": page,
-                "totalPages": 0,
-                "totalItems": 0,
+                "totalPages": total_pages,
+                "totalItems": total,
                 "itemsPerPage": limit,
-                "hasNext": False,
+                "hasNext": page < total_pages,
                 "hasPrev": page > 1,
             },
         },
@@ -504,6 +507,8 @@ def get_user(user_id: str, request: Request, db: DbSession):
     if user is None:
         raise AppError(code="E_RESOURCE_005", message="사용자를 찾을 수 없습니다", status_code=404)
 
+    stats = repo.get_activity_stats(user_id)
+
     return success_response(
         request=request,
         data={
@@ -512,11 +517,7 @@ def get_user(user_id: str, request: Request, db: DbSession):
             "profileImage": user.profile_image,
             "bio": None,
             "createdAt": user.created_at.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
-            "activityStats": {
-                "postCount": 0,
-                "commentCount": 0,
-                "likeCount": 0,
-            },
+            "activityStats": stats,
         },
         message="조회 성공",
     )
