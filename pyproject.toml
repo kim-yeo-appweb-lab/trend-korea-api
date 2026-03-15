@@ -50,6 +50,7 @@ trend-korea-full-cycle = "src.utils.pipeline.cli:main"
 trend-korea-crawl-products = "src.utils.product_crawler.cli:main"
 trend-korea-crawl-naver-news = "src.utils.naver_news_crawler.cli:main"
 trend-korea-cron = "src.scheduler.cli:main"
+trend-korea-seed = "src.utils.seed:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
