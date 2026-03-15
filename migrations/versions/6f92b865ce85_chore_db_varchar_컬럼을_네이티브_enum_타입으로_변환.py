@@ -27,6 +27,17 @@ down_revision = 'c1ffbc23a48a'
 branch_labels = None
 depends_on = None
 
+# (enum_type_name, values)
+_ENUM_TYPES = [
+    ("importance", ["low", "medium", "high"]),
+    ("verificationstatus", ["verified", "unverified"]),
+    ("issuestatus", ["ongoing", "closed", "reignited", "unverified"]),
+    ("userrole", ["guest", "member", "admin"]),
+    ("triggertype", ["article", "ruling", "announcement", "correction", "status_change"]),
+    ("sourceentitytype", ["event", "issue", "trigger"]),
+    ("tagtype", ["category", "region"]),
+]
+
 # (table, column, enum_type_name)
 _CONVERSIONS = [
     ("events", "importance", "importance"),
@@ -40,6 +51,16 @@ _CONVERSIONS = [
 
 
 def upgrade() -> None:
+    # ENUM 타입이 없으면 생성
+    for enum_name, values in _ENUM_TYPES:
+        values_str = ", ".join(f"'{v}'" for v in values)
+        op.execute(
+            f"DO $$ BEGIN "
+            f"CREATE TYPE {enum_name} AS ENUM ({values_str}); "
+            f"EXCEPTION WHEN duplicate_object THEN NULL; "
+            f"END $$"
+        )
+
     for table, column, enum_type in _CONVERSIONS:
         op.execute(
             f'ALTER TABLE "{table}" '
@@ -55,3 +76,7 @@ def downgrade() -> None:
             f'ALTER COLUMN "{column}" TYPE VARCHAR(20) '
             f'USING "{column}"::text'
         )
+
+    # ENUM 타입 삭제
+    for enum_name, _ in reversed(_ENUM_TYPES):
+        op.execute(f"DROP TYPE IF EXISTS {enum_name}")
